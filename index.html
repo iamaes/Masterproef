@@ -4,103 +4,123 @@
     <meta charset="UTF-8">
     <title>Masterproef - Interactief Recept</title>
     <style>
-        body { 
-            font-family: 'Comic Sans MS', cursive, sans-serif; 
-            text-align: center; 
-            background-color: #f0fdf4; 
-            color: #166534; 
+        /* Voorkom scrollen volledig */
+        html, body { 
+            height: 100%; 
             margin: 0; 
-            padding-top: 50px; 
+            overflow: hidden; 
+            background-color: #f0fdf4; 
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            color: #166534;
         }
-        .hidden { display: none; }
-        #instruction { font-size: 2.2rem; min-height: 150px; padding: 0 20px; display: flex; align-items: center; justify-content: center; }
-        #status-icon { font-size: 150px; margin-top: 20px; }
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        .hidden { display: none !important; }
+
+        #instruction { font-size: 2.5rem; text-align: center; padding: 20px; max-width: 800px; }
+
+        /* Container voor de afbeeldingen */
+        #image-container { height: 300px; display: flex; align-items: center; justify-content: center; }
+        #status-img { max-height: 100%; width: auto; border-radius: 20px; }
+
         #recipe { 
-            background: white; border: 5px solid #166534; padding: 30px; 
-            border-radius: 20px; display: inline-block; margin-top: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            background: white; border: 8px solid #166534; padding: 40px; 
+            border-radius: 30px; box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            max-width: 80%;
         }
-        ul { text-align: left; font-size: 1.8rem; }
+        h2 { font-size: 3rem; margin-top: 0; }
+        ul { text-align: left; font-size: 2rem; line-height: 1.5; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <h1 id="instruction">Klik op het scherm om te starten...</h1>
-        <div id="status-icon">🍄</div>
+        <h1 id="instruction">Tik op het scherm om te starten...</h1>
+        <div id="image-container">
+            <img id="status-img" src="oesterzwam.png" alt="Ingrediënt">
+        </div>
     </div>
 
     <div id="recipe" class="hidden">
-        <h2>👨‍🍳 Recept: Oesterzwammen</h2>
+        <h2>👨‍🍳 Het Recept</h2>
         <ul>
             <li>Scheur de oesterzwammen in reepjes.</li>
             <li>Verhit de olijfolie in de pan.</li>
             <li>Bak ze goudbruin in 5 minuten.</li>
-            <li>Voeg een snufje zout toe en smakelijk!</li>
+            <li>Smakelijk!</li>
         </ul>
     </div>
 
     <audio id="audio-player"></audio>
 
     <script>
-        // --- CONFIGURATIE ---
         const tagOesterzwam = "214503785897";
         const tagOlijfolie = "85065013890"; 
 
         const player = document.getElementById('audio-player');
+        const statusImg = document.getElementById('status-img');
         let step = 0;
+        let lastScannedTag = "";
+        let isProcessing = false;
 
-        // Functie om meerdere MP3's achter elkaar af te spelen
-        async function speelLijst(bestanden, tekst) {
+        async function speelLijst(bestanden, tekst, nieuweImg) {
+            isProcessing = true; // Stop even met RFID checken tijdens het praten
             document.getElementById('instruction').innerText = tekst;
+            if(nieuweImg) statusImg.src = nieuweImg;
+
             for (const bestand of bestanden) {
                 await new Promise((resolve) => {
                     player.src = encodeURIComponent(bestand);
                     player.play();
-                    player.onended = resolve; // Wacht tot fragment klaar is
+                    player.onended = resolve;
                 });
             }
+            isProcessing = false;
         }
 
-        // --- START BIJ KLIK ---
         window.onclick = () => {
             if (step === 0) {
                 step = 1;
                 speelLijst(
                     ["Leuk We gaan dit rec.mp3", "Zoek de.mp3", "Oesterzwammen.mp3"],
-                    "Leuk, we gaan dit recept maken! Zoek de oesterzwammen."
+                    "Leuk, we gaan dit recept maken! Zoek de oesterzwammen.",
+                    "oesterzwam.png" // Zorg dat dit bestand in je map staat
                 );
             }
         };
 
-        // --- RFID SCANNER LOOP ---
         setInterval(async () => {
-            if (step === 0 || step === 3) return;
+            if (step === 0 || step === 3 || isProcessing) return;
+
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
                 const id = (await resp.text()).trim();
-                if (id !== "") handleScan(id);
-            } catch (e) { }
-        }, 1000);
 
-        // --- LOGICA NA SCAN ---
+                // Alleen actie als de tag NIEUW is of anders dan de vorige
+                if (id !== "" && id !== lastScannedTag) {
+                    handleScan(id);
+                    lastScannedTag = id; 
+                }
+            } catch (e) { }
+        }, 800);
+
         function handleScan(id) {
             if (step === 1 && id === tagOesterzwam) {
                 step = 2;
-                document.getElementById('status-icon').innerText = "🫒";
                 speelLijst(
                     ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Olijfolie.mp3"],
-                    "Goed zo! Zoek nu het volgende ingrediënt: de olijfolie."
+                    "Goed zo! Zoek nu de olijfolie.",
+                    "olijfolie.png" // Zorg dat dit bestand in je map staat
                 );
             } 
             else if (step === 2 && id === tagOlijfolie) {
                 step = 3;
                 speelLijst(
                     ["Goed gedaan We hebbe.mp3"],
-                    "Goed gedaan! We hebben nu alles om dit te maken."
+                    "Goed gedaan! We hebben nu alles."
                 );
                 
-                // Toon het recept na een kleine vertraging
+                // Pas na 3 seconden switcht het scherm naar het recept
                 setTimeout(() => {
                     document.getElementById('game-container').classList.add('hidden');
                     document.getElementById('recipe').classList.remove('hidden');
