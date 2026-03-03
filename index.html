@@ -3,502 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Knapperige kabouterhapjes - QR Scan</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-
+    <title>Knapperige kabouterhapjes - RFID Editie</title>
     <style>
-        /* Basisstijlen voor volledig scherm op iPad (10.2" Viewport is 810x1080 of 1080x810 CSS Pixels) */
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            background-color: #f0f0f0;
-        }
-
-        /* Hoofdcontainer: verdeelt de ruimte (zijbalk en hoofdinhoud) */
-        .container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Linker zijbalk voor ingrediëntafbeeldingen */
-        .sidebar {
-            width: 20%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around; 
-            align-items: center;
-            padding: 10px 0;
-            background-color: #E5DCAF;
-            /* Optioneel: scrollen toestaan als er meer items komen */
-            overflow-y: auto; 
-        }
-
-        .ingredient-item {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 5px; 
-        }
-
-        .ingredient-img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            transition: border 0.3s;
-            border: 5px solid transparent;
-            border-radius: 10px;
-        }
-
-        .ingredient-img.found {
-            border: 5px solid green;
-        }
-
-        /* Hoofdinhoud (titel, knop, actie-schermen) */
-        .main-content {
-            width: 80%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-            position: relative;
-        }
-
-        /* Titel */
-        .header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            width: 100%;
-            justify-content: center;
-        }
-
-        .header h1 {
-            font-size: 3em;
-            color: #333;
-            margin: 0;
-        }
-
-        /* Startscherm */
-        #start-screen {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-
-        #start-button {
-            padding: 50px 100px;
-            font-size: 3em;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 10px 0 #38763a;
-            transition: all 0.1s;
-        }
-
-        #start-button:active {
-            box-shadow: 0 5px 0 #38763a;
-            transform: translateY(5px);
-        }
-        
-        /* Zoekscherm */
-        .search-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1;
-            width: 100%;
-        }
-
-        .search-screen h2 {
-            font-size: 2.5em;
-            color: #555;
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-
-        .search-screen img.large-ingredient {
-            width: 200px;
-            height: 200px;
-            object-fit: contain;
-            margin-bottom: 30px;
-        }
-
-        /* Style de container voor de QR-scanner-feed */
-        #reader {
-            width: 400px;
-            height: 300px;
-            border: 5px solid #ccc;
-            border-radius: 10px;
-        }
-
-        /* AANPASSING 2 & 3: Receptscherm */
-        #recipe-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
-            width: 100%; /* Maak volledige breedte van main-content */
-            text-align: left;
-            padding: 0; /* Geen padding hier meer */
-            box-sizing: border-box;
-        }
-
-        /* Nieuwe container voor recept en video naast elkaar */
-        #recipe-content-wrapper {
-            display: flex;
-            width: 100%;
-            height: 80vh; /* Zodat het op het scherm past */
-            margin-top: 20px;
-            border: 2px solid #555;
-            border-radius: 15px;
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            overflow: hidden; /* Houd alles binnen de randen */
-        }
-        
-        .recipe-left, .recipe-right {
-            padding: 15px;
-            box-sizing: border-box;
-            width: 50%;
-            overflow-y: auto; /* Zodat de inhoud kan scrollen indien nodig */
-            height: 100%;
-        }
-
-        .recipe-left {
-            border-right: 1px solid #ccc;
-        }
-
-        #recipe-screen h2 {
-            font-size: 2em; /* Kleiner gemaakt */
-            margin-bottom: 10px;
-            color: #38763a;
-            width: 100%;
-            text-align: center;
-            padding: 5px 0;
-            margin-top: 0;
-        }
-
-        #recipe-screen h3 {
-            font-size: 1.5em; /* Kleiner gemaakt */
-            margin-top: 10px;
-            border-bottom: 2px solid #38763a;
-            padding-bottom: 3px;
-            margin-bottom: 5px;
-        }
-
-        #recipe-screen p, #recipe-screen li {
-            font-size: 1em; /* Kleiner gemaakt */
-            line-height: 1.4;
-            margin-bottom: 5px;
-        }
-
-        #recipe-screen ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        
-        /* Video stijl */
-        .recipe-right video {
-            width: 100%;
-            height: auto;
-            max-height: 50vh; /* Beperk hoogte t.o.v. de container */
-            display: block;
-            margin-bottom: 10px;
-            border-radius: 8px;
-        }
-        
-        /* Resetknop stijl in receptscherm */
-        #reset-button {
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 1.2em;
-            cursor: pointer;
-            background-color: #333;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            width: 100%; /* Volledige breedte in de rechterhelft */
-            display: block;
-            text-align: center;
-        }
-
-        /* Confetti Effect (onveranderd) */
-        #confetti-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff0000);
-            opacity: 0;
-            transition: opacity 0.1s;
-            pointer-events: none;
-            z-index: 20;
-            display: none;
-            border-radius: 10px;
-        }
-        
+        /* Jouw bestaande stijlen blijven hetzelfde */
+        html, body { margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; font-family: 'Arial', sans-serif; display: flex; background-color: #f0f0f0; }
+        .container { display: flex; width: 100%; height: 100%; }
+        .sidebar { width: 20%; display: flex; flex-direction: column; justify-content: space-around; align-items: center; padding: 10px 0; background-color: #E5DCAF; overflow-y: auto; }
+        .ingredient-img { width: 80px; height: 80px; object-fit: contain; transition: border 0.3s; border: 5px solid transparent; border-radius: 10px; }
+        .ingredient-img.found { border: 5px solid green; }
+        .main-content { width: 80%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; text-align: center; padding: 20px; box-sizing: border-box; position: relative; }
+        .header h1 { font-size: 3em; color: #333; margin: 0; }
+        #start-screen { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+        #start-button { padding: 50px 100px; font-size: 3em; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 15px; box-shadow: 0 10px 0 #38763a; }
+        .search-screen { display: none; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; width: 100%; }
+        .large-ingredient { width: 200px; height: 200px; object-fit: contain; margin-bottom: 30px; }
+        #rfid-status { font-size: 1.5em; color: #555; font-style: italic; margin-top: 20px; }
+        #recipe-screen { display: none; flex-direction: column; align-items: center; flex-grow: 1; width: 100%; text-align: left; }
+        #recipe-content-wrapper { display: flex; width: 100%; height: 70vh; margin-top: 20px; border: 2px solid #555; border-radius: 15px; background-color: white; overflow: hidden; }
+        .recipe-left, .recipe-right { padding: 15px; width: 50%; overflow-y: auto; }
+        .recipe-right video { width: 100%; border-radius: 8px; }
+        #reset-button { margin-top: 10px; padding: 10px 20px; font-size: 1.2em; cursor: pointer; background-color: #333; color: white; border-radius: 8px; width: 100%; }
+        #confetti-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff0000); opacity: 0; display: none; pointer-events: none; z-index: 20; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <div class="sidebar">
-            <div class="ingredient-item">
-                <img id="img-oesterzwam" class="ingredient-img" src="oesterzwam.png" alt="Oesterzwam" data-name="oesterzwam">
-            </div>
-            <div class="ingredient-item">
-                <img id="img-olijfolie" class="ingredient-img" src="olijfolie.png" alt="Olijfolie" data-name="olijfolie">
-            </div>
-            <div class="ingredient-item">
-                <img id="img-rozemarijn" class="ingredient-img" src="rozemarijn.png" alt="Rozemarijn" data-name="rozemarijn">
-            </div>
-            <div class="ingredient-item">
-                <img id="img-tijm" class="ingredient-img" src="tijm.png" alt="Tijm" data-name="tijm">
-            </div>
+            <img id="img-oesterzwam" class="ingredient-img" src="oesterzwam.png">
+            <img id="img-olijfolie" class="ingredient-img" src="olijfolie.png">
         </div>
-
         <div class="main-content">
-            <div class="header">
-                <h1>Knapperige kabouterhapjes</h1>
-            </div>
-
-            <div id="start-screen">
-                <button id="start-button">START!</button>
-            </div>
-
+            <div class="header"><h1>Knapperige kabouterhapjes</h1></div>
+            <div id="start-screen"><button id="start-button">START!</button></div>
             <div id="search-screen" class="search-screen">
-                <h2 id="search-text">Zoek dit ingrediënt: OESTERZWAM</h2>
-                <img id="large-ingredient-img" class="large-ingredient" src="" alt="Groot ingrediënt">
-                
-                <div id="reader"></div>
+                <h2 id="search-text">Zoek ingrediënt...</h2>
+                <img id="large-ingredient-img" class="large-ingredient" src="">
+                <div id="rfid-status">Houd de tag tegen de magische lezer...</div>
             </div>
-
             <div id="recipe-screen">
                 <h2>Het Recept</h2>
                 <div id="recipe-content-wrapper">
                     <div class="recipe-left">
                         <h3>Ingrediënten:</h3>
-                        <ul>
-                            <li>250 g oesterzwammen</li>
-                            <li>2 eetlepels olijfolie</li>
-                            <li>1 takje rozemarijn</li>
-                            <li>1 takje tijm</li>
-                        </ul>
-                        <h3>Bereidingswijze:</h3>
-                        <ol>
-                            <li>Maak de oesterzwammen schoon.</li>
-                            <li>Laat je kind voorzichtig ruiken aan de oesterzwammen (optioneel).</li>
-                            <li>Verhit de pan met olijfolie.</li>
-                            <li>Voeg de oesterzwammen toe en bak ze goudbruin.</li>
-                            <li>Voeg de kruiden toe en serveer.</li>
-                        </ol>
-                        <p style="font-size: 1.5em; text-align: center; width: 100%; color: #e74c3c; margin-top: 15px;">Smakelijk!</p>
+                        <ul><li>250g oesterzwammen</li><li>Olijfolie</li></ul>
+                        <h3>Bereiding:</h3>
+                        <ol><li>Bak de zwammen goudbruin in de olie.</li></ol>
                     </div>
-                    
                     <div class="recipe-right">
-                        <video id="recipe-video" src="Zwamzakken_lied.mp4" controls autoplay loop>
-                            Je browser ondersteunt de video tag niet.
-                        </video>
-                        <button id="reset-button">Opnieuw beginnen</button>
+                        <video id="recipe-video" src="Zwamzakken_lied.mp4" controls loop></video>
+                        <button id="reset-button">Opnieuw</button>
                     </div>
                 </div>
             </div>
-            
             <div id="confetti-overlay"></div>
         </div>
     </div>
 
     <script>
         const ingredients = [
-            // Aangepast: 'name' en 'qrCodeText' zijn nu meervoud. 'htmlIdName' is de koppeling naar HTML ID.
-            { name: "oesterzwammen", htmlIdName: "oesterzwam", file: "oesterzwam.png", qrCodeText: "oesterzwammen" }, 
-            { name: "olijfolie", htmlIdName: "olijfolie", file: "olijfolie.png", qrCodeText: "olijfolie" },
-            { name: "rozemarijn", htmlIdName: "rozemarijn", file: "rozemarijn.png", qrCodeText: "rozemarijn" },
-            { name: "tijm", htmlIdName: "tijm", file: "tijm.png", qrCodeText: "tijm" }
+            { name: "oesterzwammen", id: "oesterzwam", file: "oesterzwam.png", rfid: "214503785897" },
+            { name: "olijfolie", id: "olijfolie", file: "olijfolie.png", rfid: "85065013890" }
         ];
 
-        let currentIngredientIndex = 0;
-        let qrCodeScanner = null; // Opslag voor de scanner-instantie
-
-        const startScreen = document.getElementById('start-screen');
+        let currentIndex = 0;
         const searchScreen = document.getElementById('search-screen');
         const recipeScreen = document.getElementById('recipe-screen');
-        const startButton = document.getElementById('start-button');
-        const searchHeader = document.getElementById('search-text');
-        const largeIngredientImg = document.getElementById('large-ingredient-img');
-        const confettiOverlay = document.getElementById('confetti-overlay');
-        const resetButton = document.getElementById('reset-button');
-        const recipeVideo = document.getElementById('recipe-video'); // Nieuwe referentie
-        
-        // Functie voor spraaksynthese
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'nl-NL'; 
-                window.speechSynthesis.speak(utterance);
-            } else {
-                console.warn('Speech Synthesis niet ondersteund in deze browser.');
+        const recipeVideo = document.getElementById('recipe-video');
+
+        // Luister naar de Python "Bridge"
+        window.addEventListener('message', (event) => {
+            const scannedID = event.data.toString().trim();
+            checkRFID(scannedID);
+        });
+
+        function checkRFID(tagID) {
+            const target = ingredients[currentIndex];
+            if (tagID === target.rfid) {
+                ingredientFound();
             }
         }
 
-        // Functie om de QR-scanner te starten
-        async function startQrScanner() {
-            const ingredient = ingredients[currentIngredientIndex];
-            
-            // Initialiseer de scanner als deze nog niet bestaat
-            if (!qrCodeScanner) {
-                // 'reader' is de ID van de div waar de video-feed in komt
-                qrCodeScanner = new Html5Qrcode("reader");
-            }
-            
-            // Configureer de scanner: gebruik de camera aan de voorkant ('user')
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 }, 
-                facingMode: "user" 
-            };
-
-            await qrCodeScanner.start(
-                { facingMode: "user" },
-                config,
-                (decodedText, decodedResult) => {
-                    // Deze functie wordt aangeroepen wanneer een QR-code wordt gedetecteerd
-                    
-                    // Controleer of de gescande tekst overeenkomt met het verwachte ingrediënt
-                    if (decodedText.toLowerCase() === ingredient.qrCodeText) {
-                        // Scan succesvol! Stop de scanner en ga verder.
-                        qrCodeScanner.stop().then(() => {
-                            ingredientFound();
-                        }).catch(err => {
-                            console.error("Fout bij stoppen van de scanner:", err);
-                            ingredientFound(); // Ga toch verder
-                        });
-                    }
-                },
-                (errorMessage) => {
-                    // Optioneel: log fouten, zoals 'geen QR-code gevonden'
-                    // console.log(`QR Scan error: ${errorMessage}`); 
-                }
-            );
-        }
-
-        // Functie om de QR-scanner te stoppen
-        function stopQrScanner() {
-            if (qrCodeScanner && qrCodeScanner.isScanning) {
-                // Controleer of de scanner actief is voordat je probeert te stoppen
-                // Soms is deze al gestopt in ingredientFound, dus een check is nuttig
-                qrCodeScanner.stop().catch(err => console.error("Fout bij stoppen scanner: ", err));
-            }
-        }
-
-        // Start het zoekproces voor het huidige ingrediënt
-        async function startSearch() {
-            // Verberg alle schermen behalve Zoekscherm
-            startScreen.style.display = 'none';
-            recipeScreen.style.display = 'none';
-            searchScreen.style.display = 'flex';
-            // Zorg ervoor dat de video stopt als je teruggaat naar zoeken
-            recipeVideo.pause(); 
-            recipeVideo.currentTime = 0; 
-
-            const ingredient = ingredients[currentIngredientIndex];
-
-            // Update hoofdinhoud (gebruikt nu de meervoudsvorm "oesterzwammen")
-            searchHeader.textContent = `Zoek dit ingrediënt: ${ingredient.name.toUpperCase()}`;
-            largeIngredientImg.src = ingredient.file;
-            largeIngredientImg.alt = ingredient.name;
-            
-            // Computer zegt de tekst
-            speak(`Zoek dit ingrediënt: ${ingredient.name}`);
-
-            // Start de QR-scanner!
-            await startQrScanner();
-        }
-
-        // Functie om het ingrediënt als 'gevonden' te markeren
         function ingredientFound() {
-            const ingredient = ingredients[currentIngredientIndex];
-            
-            // 1. Groene rand
-            // Aangepast: gebruikt 'htmlIdName' om te linken naar de singular ID in de HTML
-            const sideImg = document.getElementById(`img-${ingredient.htmlIdName}`); 
-            if (sideImg) {
-                sideImg.classList.add('found');
-            }
-
-            // 2. Confetti effect (2 seconden)
-            confettiOverlay.style.display = 'block';
-            confettiOverlay.style.opacity = '1';
+            document.getElementById(`img-${ingredients[currentIndex].id}`).classList.add('found');
+            const overlay = document.getElementById('confetti-overlay');
+            overlay.style.display = 'block'; overlay.style.opacity = '0.8';
             
             setTimeout(() => {
-                confettiOverlay.style.opacity = '0';
-                setTimeout(() => {
-                    confettiOverlay.style.display = 'none';
-                    
-                    // Ga naar het volgende ingrediënt of toon het recept
-                    currentIngredientIndex++;
-                    if (currentIngredientIndex < ingredients.length) {
-                        startSearch(); // Volgende ingrediënt
-                    } else {
-                        showRecipe(); // Recept
-                    }
-                }, 500); // Kortere timeout om de animatie te voltooien
+                overlay.style.display = 'none';
+                currentIndex++;
+                if (currentIndex < ingredients.length) {
+                    updateSearch();
+                } else {
+                    showRecipe();
+                }
             }, 2000);
         }
 
-        // Toon het receptscherm
+        function updateSearch() {
+            const item = ingredients[currentIndex];
+            document.getElementById('search-text').textContent = `Zoek: ${item.name.toUpperCase()}`;
+            document.getElementById('large-ingredient-img').src = item.file;
+            speak(`Zoek de ${item.name}`);
+        }
+
         function showRecipe() {
-            stopQrScanner();
             searchScreen.style.display = 'none';
             recipeScreen.style.display = 'flex';
-            // Start de video wanneer het receptscherm verschijnt
-            recipeVideo.play().catch(error => console.error("Video afspelen mislukt:", error)); 
-            speak("Gefeliciteerd! Alle ingrediënten zijn gevonden. Hier is het recept. Smakelijk! Je kan ook nog deze video beluisteren!");
+            recipeVideo.play();
+            speak("Gefeliciteerd! Je hebt alles gevonden.");
         }
 
-        // Reset naar de startstatus
-        function resetGame() {
-            stopQrScanner();
-            currentIngredientIndex = 0;
-            
-            // Reset zijbalkafbeeldingen
-            document.querySelectorAll('.ingredient-img').forEach(img => {
-                img.classList.remove('found');
-            });
-            
-            // Stop de video als je teruggaat naar start
-            recipeVideo.pause(); 
-            recipeVideo.currentTime = 0;
-            
-            // Toon startscherm
-            searchScreen.style.display = 'none';
-            recipeScreen.style.display = 'none';
-            startScreen.style.display = 'flex';
+        function speak(t) { 
+            const u = new SpeechSynthesisUtterance(t); u.lang = 'nl-NL'; window.speechSynthesis.speak(u); 
         }
 
-        // EVENT LISTENERS
-        startButton.addEventListener('click', startSearch);
-        resetButton.addEventListener('click', resetGame);
-        
-        // Start de applicatie in de reset-modus
-        resetGame();
+        document.getElementById('start-button').addEventListener('click', () => {
+            document.getElementById('start-screen').style.display = 'none';
+            searchScreen.style.display = 'flex';
+            updateSearch();
+        });
 
+        document.getElementById('reset-button').addEventListener('click', () => location.reload());
     </script>
 </body>
 </html>
