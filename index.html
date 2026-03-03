@@ -7,35 +7,26 @@
         body { 
             font-family: 'Comic Sans MS', cursive, sans-serif; 
             text-align: center; 
-            padding-top: 50px; 
             background-color: #f0fdf4; 
-            color: #166534;
-            margin: 0;
+            color: #166534; 
+            margin: 0; 
+            padding-top: 50px; 
         }
         .hidden { display: none; }
-        #instruction { font-size: 2.5rem; min-height: 120px; padding: 0 20px; display: flex; align-items: center; justify-content: center; }
+        #instruction { font-size: 2.2rem; min-height: 150px; padding: 0 20px; display: flex; align-items: center; justify-content: center; }
         #status-icon { font-size: 150px; margin-top: 20px; }
         #recipe { 
             background: white; border: 5px solid #166534; padding: 30px; 
             border-radius: 20px; display: inline-block; margin-top: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
-        ul { text-align: left; font-size: 1.8rem; line-height: 1.6; }
-        
-        /* DEBUG VENSTER ONDERAAN */
-        #debug-log {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: rgba(0,0,0,0.85); color: #00ff00;
-            font-family: monospace; font-size: 14px;
-            padding: 10px; text-align: left; height: 80px; overflow-y: auto;
-            border-top: 2px solid #333; z-index: 9999;
-        }
+        ul { text-align: left; font-size: 1.8rem; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <h1 id="instruction">Tik op het scherm om de kabouter te wekken...</h1>
+        <h1 id="instruction">Klik op het scherm om te starten...</h1>
         <div id="status-icon">🍄</div>
     </div>
 
@@ -49,90 +40,71 @@
         </ul>
     </div>
 
-    <div id="debug-log">Systeem start op... Wacht op stemmen...</div>
+    <audio id="audio-player"></audio>
 
     <script>
-        // --- CONFIGURATIE MET JOUW ID'S ---
+        // --- CONFIGURATIE ---
         const tagOesterzwam = "214503785897";
         const tagOlijfolie = "85065013890"; 
 
-        let step = 0; 
-        let dutchVoice = null;
+        const player = document.getElementById('audio-player');
+        let step = 0;
 
-        function log(msg) {
-            const d = document.getElementById('debug-log');
-            d.innerHTML = "[" + new Date().toLocaleTimeString() + "] " + msg + "<br>" + d.innerHTML;
-        }
-
-        // --- STEMMEN LADEN ---
-        function loadVoices() {
-            const voices = window.speechSynthesis.getVoices();
-            // We zoeken specifiek naar een NL stem
-            dutchVoice = voices.find(v => v.lang.includes('nl-NL') || v.lang.includes('nl_BE') || v.lang.includes('nl'));
-            
-            if (voices.length > 0) {
-                log("Stemmen gevonden: " + voices.length + " | NL stem: " + (dutchVoice ? "✅ JA (" + dutchVoice.name + ")" : "❌ NEE"));
+        // Functie om meerdere MP3's achter elkaar af te spelen
+        async function speelLijst(bestanden, tekst) {
+            document.getElementById('instruction').innerText = tekst;
+            for (const bestand of bestanden) {
+                await new Promise((resolve) => {
+                    player.src = encodeURIComponent(bestand);
+                    player.play();
+                    player.onended = resolve; // Wacht tot fragment klaar is
+                });
             }
         }
 
-        // De browser laadt stemmen asynchroon
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-        // Forceer een check na 1 en 3 seconden voor de zekerheid
-        setTimeout(loadVoices, 1000);
-        setTimeout(loadVoices, 3000);
-
-        function spreek(tekst) {
-            log("🔊 Kabouter zegt: " + tekst);
-            const m = new SpeechSynthesisUtterance(tekst);
-            if (dutchVoice) m.voice = dutchVoice;
-            m.lang = 'nl-NL';
-            m.rate = 0.85; // Iets trager is duidelijker
-            m.pitch = 1.2; // Iets hogere stem voor kabouter-effect
-            
-            window.speechSynthesis.speak(m);
-            document.getElementById('instruction').innerText = tekst;
-        }
-
-        // Eerste interactie is nodig voor audio
+        // --- START BIJ KLIK ---
         window.onclick = () => {
             if (step === 0) {
                 step = 1;
-                log("Scherm geactiveerd door gebruiker.");
-                spreek("Leuk, we gaan Oesterzwammen klaarmaken! Zoek de Oesterzwammen.");
-                document.getElementById('status-icon').innerText = "🍄❓";
+                speelLijst(
+                    ["Leuk We gaan dit rec.mp3", "Zoek de.mp3", "Oesterzwammen.mp3"],
+                    "Leuk, we gaan dit recept maken! Zoek de oesterzwammen."
+                );
             }
         };
 
-        // RFID Check
+        // --- RFID SCANNER LOOP ---
         setInterval(async () => {
             if (step === 0 || step === 3) return;
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
-                if (!resp.ok) return;
                 const id = (await resp.text()).trim();
-                if (id !== "") {
-                    log("📡 TAG GEDETECTEERD: " + id);
-                    handleScan(id);
-                }
+                if (id !== "") handleScan(id);
             } catch (e) { }
         }, 1000);
 
+        // --- LOGICA NA SCAN ---
         function handleScan(id) {
             if (step === 1 && id === tagOesterzwam) {
                 step = 2;
-                log("Match gevonden: Oesterzwammen!");
-                spreek("Goed zo! Zoek nu de olijfolie.");
-                document.getElementById('status-icon').innerText = "🫒❓";
+                document.getElementById('status-icon').innerText = "🫒";
+                speelLijst(
+                    ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Olijfolie.mp3"],
+                    "Goed zo! Zoek nu het volgende ingrediënt: de olijfolie."
+                );
             } 
             else if (step === 2 && id === tagOlijfolie) {
                 step = 3;
-                log("Match gevonden: Olijfolie!");
-                spreek("Goed gedaan, we hebben alles om de oesterzwammen klaar te maken. Dit is het recept.");
+                speelLijst(
+                    ["Goed gedaan We hebbe.mp3"],
+                    "Goed gedaan! We hebben nu alles om dit te maken."
+                );
                 
-                document.getElementById('game-container').classList.add('hidden');
-                document.getElementById('recipe').classList.remove('hidden');
-            } else {
-                log("Onbekende tag of verkeerde volgorde.");
+                // Toon het recept na een kleine vertraging
+                setTimeout(() => {
+                    document.getElementById('game-container').classList.add('hidden');
+                    document.getElementById('recipe').classList.remove('hidden');
+                }, 3000);
             }
         }
     </script>
