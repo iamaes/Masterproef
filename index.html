@@ -2,109 +2,71 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kabouterhapjes - Masterproef</title>
+    <title>Masterproef - Interactief Recept</title>
     <style>
-        body {
-            font-family: 'Comic Sans MS', cursive, sans-serif;
-            background-color: #f0fdf4;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            text-align: center;
-        }
-        #status-text {
-            font-size: 3rem;
-            color: #166534;
-            margin-bottom: 20px;
-            padding: 0 20px;
-        }
-        #recipe-container {
-            display: none;
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            max-width: 80%;
-        }
-        .icon { font-size: 100px; margin: 20px; }
+        /* Hier kun je jouw eigen CSS weer terugzetten */
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f4f4f4; }
+        .hidden { display: none; }
+        #recipe { background: white; border: 2px solid green; padding: 20px; display: inline-block; }
     </style>
 </head>
 <body>
 
-    <div id="status-text">Klik ergens om te starten...</div>
-    <div id="icon-display" class="icon">🍄</div>
+    <div id="game-container">
+        <h1 id="instruction">Klik op het scherm om de kabouter te wekken...</h1>
+        <div id="status-icon" style="font-size: 100px;">🍄</div>
+    </div>
 
-    <div id="recipe-container">
-        <h1>Recept: Gebakken Oesterzwammen</h1>
-        <ul style="text-align: left; font-size: 1.5rem;">
-            <li>Scheur de oesterzwammen in reepjes.</li>
-            <li>Verhit de olijfolie in de pan.</li>
-            <li>Bak ze goudbruin in 5 minuten.</li>
-            <li>Voeg een snufje zout toe en smullen maar!</li>
-        </ul>
+    <div id="recipe" class="hidden">
+        <h2>Recept: Oesterzwammen met Olijfolie</h2>
+        <p>1. Snij de zwammen.<br>2. Verhit de olie.<br>3. Bakken maar!</p>
     </div>
 
     <script>
-        // --- CONFIGURATIE ---
-        // VUL HIER JE EIGEN RFID NUMMERS IN
-        const tagOesterzwam = "214503785897"; 
-        const tagOlijfolie = "85065013890"; 
+        const tagOesterzwam = "214503785897";
+        const tagOlijfolie = "85065013890";
 
-        let step = 0; // 0: Start, 1: Zoek Oesterzwam, 2: Zoek Olijfolie, 3: Recept
+        let step = 0; 
 
-        // --- SPRAAK FUNCTIE ---
+        // --- DE SPRAAKFUNCTIE ---
         function spreek(tekst) {
+            console.log("Kabouter zegt: " + tekst);
             const m = new SpeechSynthesisUtterance(tekst);
             m.lang = 'nl-NL';
-            m.rate = 0.9; // Iets langzamer voor een kabouter-effect
+            m.rate = 0.9;
             window.speechSynthesis.speak(m);
-            document.getElementById('status-text').innerText = tekst;
+            document.getElementById('instruction').innerText = tekst;
         }
 
-        // --- START NA KLIK ---
+        // --- START BIJ KLIK ---
         window.onclick = () => {
             if (step === 0) {
                 step = 1;
-                spreek("Leuk, we gaan oesterzwammen klaarmaken! Zoek de oesterzwammen.");
-                document.getElementById('icon-display').innerText = "❓";
+                spreek("Leuk, we gaan Oesterzwammen klaarmaken! Zoek de Oesterzwammen.");
             }
         };
 
         // --- RFID LOOP ---
         setInterval(async () => {
             if (step === 0 || step === 3) return;
-
             try {
-                const response = await fetch('last_tag.txt?t=' + Date.now());
-                const tagID = (await response.text()).trim();
-
-                if (tagID !== "") {
-                    handleScan(tagID);
-                }
-            } catch (e) { console.log("Bestand nog niet leesbaar"); }
+                const resp = await fetch('last_tag.txt?t=' + Date.now());
+                const id = (await resp.text()).trim();
+                if (id !== "") handleScan(id);
+            } catch (e) {}
         }, 1000);
 
         function handleScan(id) {
             if (step === 1 && id === tagOesterzwam) {
                 step = 2;
-                document.getElementById('icon-display').innerText = "✅";
                 spreek("Goed zo! Zoek nu de olijfolie.");
-                setTimeout(() => { document.getElementById('icon-display').innerText = "🫒"; }, 2000);
+                document.getElementById('status-icon').innerText = "🫒";
             } 
             else if (step === 2 && id === tagOlijfolie) {
                 step = 3;
-                document.getElementById('icon-display').innerText = "👨‍🍳";
-                spreek("Goed gedaan! We hebben alles om de oesterzwammen klaar te maken. Dit is het recept.");
-                
-                // Toon recept
-                document.getElementById('status-text').style.display = 'none';
-                document.getElementById('icon-display').style.display = 'none';
-                document.getElementById('recipe-container').style.display = 'block';
+                spreek("Goed gedaan, we hebben alles om de oesterzwammen klaar te maken. Dit is het recept.");
+                document.getElementById('game-container').classList.add('hidden');
+                document.getElementById('recipe').classList.remove('hidden');
             }
         }
     </script>
