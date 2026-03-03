@@ -4,36 +4,76 @@
     <meta charset="UTF-8">
     <title>Masterproef - Interactief Recept</title>
     <style>
-        /* Hier kun je jouw eigen CSS weer terugzetten */
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f4f4f4; }
+        body { 
+            font-family: 'Comic Sans MS', cursive, sans-serif; 
+            text-align: center; 
+            padding-top: 50px; 
+            background-color: #f0fdf4; 
+            color: #166534;
+        }
         .hidden { display: none; }
-        #recipe { background: white; border: 2px solid green; padding: 20px; display: inline-block; }
+        #game-container { margin-top: 50px; }
+        #instruction { font-size: 2.5rem; min-height: 100px; padding: 0 20px; }
+        #status-icon { font-size: 150px; margin-top: 20px; }
+        #recipe { 
+            background: white; 
+            border: 5px solid #166534; 
+            padding: 30px; 
+            border-radius: 20px; 
+            display: inline-block; 
+            margin-top: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        ul { text-align: left; font-size: 1.5rem; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <h1 id="instruction">Klik op het scherm om de kabouter te wekken...</h1>
-        <div id="status-icon" style="font-size: 100px;">🍄</div>
+        <div id="status-icon">🍄</div>
     </div>
 
     <div id="recipe" class="hidden">
-        <h2>Recept: Oesterzwammen met Olijfolie</h2>
-        <p>1. Snij de zwammen.<br>2. Verhit de olie.<br>3. Bakken maar!</p>
+        <h2>Recept: Oesterzwammen</h2>
+        <ul>
+            <li>Scheur de oesterzwammen in reepjes.</li>
+            <li>Verhit de olijfolie in de pan.</li>
+            <li>Bak ze goudbruin in 5 minuten.</li>
+            <li>Voeg een snufje zout toe en smakelijk!</li>
+        </ul>
     </div>
 
     <script>
+        // --- CONFIGURATIE ---
         const tagOesterzwam = "214503785897";
-        const tagOlijfolie = "85065013890";
+        const tagOlijfolie = "85065013890"; // Vul hier je ID in
 
         let step = 0; 
+        let dutchVoice = null;
+
+        // --- STEMMEN LADEN ---
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            dutchVoice = voices.find(v => v.lang.includes('nl'));
+            console.log("Stemmen geladen, NL gevonden:", dutchVoice ? "Ja" : "Nee");
+        }
+
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices(); // Directe poging
 
         // --- DE SPRAAKFUNCTIE ---
         function spreek(tekst) {
-            console.log("Kabouter zegt: " + tekst);
+            console.log("Poging tot spreken: " + tekst);
             const m = new SpeechSynthesisUtterance(tekst);
+            
+            if (dutchVoice) {
+                m.voice = dutchVoice;
+            }
+
             m.lang = 'nl-NL';
-            m.rate = 0.9;
+            m.rate = 0.9; // Rustig tempo
+
             window.speechSynthesis.speak(m);
             document.getElementById('instruction').innerText = tekst;
         }
@@ -43,19 +83,23 @@
             if (step === 0) {
                 step = 1;
                 spreek("Leuk, we gaan Oesterzwammen klaarmaken! Zoek de Oesterzwammen.");
+                document.getElementById('status-icon').innerText = "❓";
             }
         };
 
-        // --- RFID LOOP ---
+        // --- RFID BRIDGE CHECK ---
         setInterval(async () => {
             if (step === 0 || step === 3) return;
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
                 const id = (await resp.text()).trim();
                 if (id !== "") handleScan(id);
-            } catch (e) {}
+            } catch (e) {
+                console.log("Wachten op bestand...");
+            }
         }, 1000);
 
+        // --- LOGICA NA SCAN ---
         function handleScan(id) {
             if (step === 1 && id === tagOesterzwam) {
                 step = 2;
@@ -65,6 +109,8 @@
             else if (step === 2 && id === tagOlijfolie) {
                 step = 3;
                 spreek("Goed gedaan, we hebben alles om de oesterzwammen klaar te maken. Dit is het recept.");
+                
+                // Switch naar recept lay-out
                 document.getElementById('game-container').classList.add('hidden');
                 document.getElementById('recipe').classList.remove('hidden');
             }
