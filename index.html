@@ -176,25 +176,22 @@
         }
         
         function startSpel(receptNummer) {
+            // Blokkeer als we nog aan het wachten zijn op loslaten vorige druk
             if (waitingForButtonRelease) return;
-            if (step === 99) {
-                resetNaarStandby();
-                return;
-            }
-            if (step !== 0) return;
+            
+            // Als we al in een spel zitten (stap 1, 2, 3...), negeren we de knop
+            if (step !== 0 && step !== 99) return;
 
             huidigRecept = recepten[receptNummer];
             step = 1;
             
-            // UI aanpassen
             document.body.classList.remove('standby');
             document.body.classList.add('active');
             document.getElementById('game-container').classList.remove('hidden');
             debug.innerText = "Recept " + receptNummer + " gestart";
 
-            // Start eerste stap
             const eersteStap = huidigRecept.stappen[0];
-            speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. " + eersteStap.tekst, eersteStap.img);
+            speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! " + eersteStap.tekst, eersteStap.img);
         }
 
         setInterval(async () => {
@@ -202,18 +199,26 @@
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
                 const id = (await resp.text()).trim();
 
-                // BELANGRIJK: Dit moet ALTIJD gecheckt worden, ook tijdens audio
+                // 1. Vrijgeven als knop is losgelaten
                 if (id === "") {
                     lastScannedTag = ""; 
                     waitingForButtonRelease = false;
                     return;
                 }
 
-                // Knoppen checken (mag ook tijdens audio, want resetten moet altijd kunnen)
-                if (id === "START_1") { startSpel("1"); return; }
-                if (id === "START_2") { startSpel("2"); return; }
+                // 2. RESET LOGICA: Als we op het einde zijn en er wordt gedrukt -> Direct naar standby
+                if (step === 99 && (id === "START_1" || id === "START_2")) {
+                    resetNaarStandby();
+                    return; // Stop deze loop hier, wacht op volgende interval
+                }
 
-                // RFID checken (MAG NIET tijdens audio/processing)
+                // 3. START LOGICA: Alleen als we in standby staan (step 0)
+                if (step === 0) {
+                    if (id === "START_1") { startSpel("1"); return; }
+                    if (id === "START_2") { startSpel("2"); return; }
+                }
+
+                // 4. RFID LOGICA: Alleen tijdens het spel
                 if (isProcessing) return; 
 
                 if (step > 0 && step < 99 && huidigRecept && id !== lastScannedTag) {
