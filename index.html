@@ -142,6 +142,7 @@
         let huidigRecept = null;
         let lastScannedTag = "";
         let isProcessing = false;
+        let waitingForButtonRelease = false;
 
         async function speelLijst(bestanden, tekst, nieuweImg) {
             isProcessing = true; 
@@ -164,6 +165,7 @@
             huidigRecept = null;
             lastScannedTag = "";
             isProcessing = false;
+            waitingForButtonRelease = true;
             
             // UI herstellen
             document.body.classList.remove('active');
@@ -174,6 +176,7 @@
         }
         
         function startSpel(receptNummer) {
+            if (waitingForButtonRelease) return;
             if (step === 99) {
                 resetNaarStandby();
                 return;
@@ -203,6 +206,7 @@
 
                 if (id === "") {
                     lastScannedTag = ""; 
+                    waitingForButtonRelease = false;
                     return;
                 }
 
