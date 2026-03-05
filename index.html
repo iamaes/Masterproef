@@ -164,58 +164,82 @@ samen met je kind van de tempeh toverstaafjes."]
         }
         
         // --- NIEUWE RESET FUNCTIE ---
-        function handleButton(id) {
-            // ACTIE 1: RESET (Als we op het einde zijn)
-            if (step === 99) {
-                step = 0;
-                huidigRecept = null;
-                document.body.className = "standby";
-                document.getElementById('game-container').classList.add('hidden');
-                document.getElementById('recipe-window').classList.add('hidden');
-                debug.innerText = "Systeem Standby";
-                return;
-            }
+        function resetNaarStandby() {
+            step = 0;
+            huidigRecept = null;
+            lastScannedTag = "";
+            isProcessing = false;
+            
+            // UI herstellen
+            document.body.classList.remove('active');
+            document.body.classList.add('standby');
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('recipe-window').classList.add('hidden');
+            debug.innerText = "Terug naar Standby...";
+        }
 
-            // ACTIE 2: START (Als we in standby zijn)
-            if (step === 0) {
-                const num = id.split("_")[1]; // Krijg '1' of '2' uit 'START_1'
-                huidigRecept = recepten[num];
-                step = 1;
-                document.body.className = "active";
-                document.getElementById('game-container').classList.remove('hidden');
-                
-                const eersteStap = huidigRecept.stappen[0];
-                speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! " + eersteStap.tekst, eersteStap.img);
+        function startSpel(receptNummer) {
+
+            // Als we midden in een spel zitten: negeren
+            if (step > 0 && step < 99) return;
+        
+            // Als we op het eindscherm zitten: eerst resetten
+            if (step === 99) {
+                resetNaarStandby();
             }
+        
+            // Start nieuw spel
+            huidigRecept = recepten[receptNummer];
+            step = 1;
+        
+            document.body.classList.remove('standby');
+            document.body.classList.add('active');
+            document.getElementById('game-container').classList.remove('hidden');
+        
+            const eersteStap = huidigRecept.stappen[0];
+            speelLijst(
+                eersteStap.audio,
+                "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. " + eersteStap.tekst,
+                eersteStap.img
+            );
         }
 
         setInterval(async () => {
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
-                const raw = await resp.text();
-                const id = raw.trim();
+                const data = (await resp.text()).trim();
 
-                // Niets te zien? Reset geheugen en stop.
-                if (id === "") {
-                    lastScannedTag = "";
+                // 1. Als het bestand leeg is, reset de scan-geheugen
+                if (data === "") {
+                    lastScannedTag = ""; 
                     return;
                 }
 
-                // Voorkom dubbele verwerking van dezelfde scan/druk
-                if (id === lastScannedTag) return;
-                lastScannedTag = id;
-
-                // Is het een knop?
-                if (id === "START_1" || id === "START_2") {
-                    handleButton(id);
-                } 
-                // Is het een RFID tag? (Alleen tijdens spel en niet tijdens praten)
-                else if (step > 0 && step < 99 && !isProcessing) {
-                    handleScan(id);
+                // 2. Knoppen hebben ALTIJD voorrang op isProcessing
+                if (data === "START_1") { 
+                    if (lastScannedTag !== "START_1") { // Voorkom herhaling zolang knop ingedrukt is
+                        startSpel("1"); 
+                        lastScannedTag = "START_1";
+                    }
+                    return; 
+                }
+                if (data === "START_2") { 
+                    if (lastScannedTag !== "START_2") {
+                        startSpel("2"); 
+                        lastScannedTag = "START_2";
+                    }
+                    return; 
                 }
 
-            } catch (e) { console.error(e); }
-        }, 500);
+                // 3. RFID scannen mag alleen als we niet praten en in een spel zitten
+                if (isProcessing) return; 
+
+                if (step > 0 && step < 99 && huidigRecept && data !== lastScannedTag) {
+                    handleScan(data);
+                    lastScannedTag = data; 
+                }
+            } catch (e) { }
+        }, 500); // Iets sneller checken (0.5 sec) voor betere respons
 
         function handleScan(id) {
             const huidigeStapData = huidigRecept.stappen[step-1];
@@ -224,11 +248,14 @@ samen met je kind van de tempeh toverstaafjes."]
                 if (step < huidigRecept.stappen.length) {
                     const volgendeData = huidigRecept.stappen[step];
                     step++;
-                    speelLijst(volgendeData.audio, "Goed zo! " + volgendeData.tekst, volgendeData.img);
+                    speelLijst(volgendeData.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgendeData.tekst, volgendeData.img);
                 } else {
                     step = 99; 
                     speelLijst(huidigRecept.eindAudio, huidigRecept.eindTekst);
-                    setTimeout(toonRecept, 4000);
+                    
+                    setTimeout(() => {
+                        toonRecept();
+                    }, 4000);
                 }
             } else {
                 debug.innerText = "Verkeerde tag: " + id;
@@ -247,8 +274,9 @@ samen met je kind van de tempeh toverstaafjes."]
                 li.innerText = item;
                 lijst.appendChild(li);
             });
+
             win.classList.remove('hidden');
-            debug.innerText = "Klaar! Klik voor standby.";
+            debug.innerText = "Klaar! Druk op een knop voor standby.";
         }
     </script>
 </body>
