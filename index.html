@@ -9,7 +9,7 @@
             height: 100%; 
             margin: 0; 
             overflow: hidden; 
-            background-color: #ffffff; 
+            background-color: #f0fdf4; 
             font-family: 'Comic Sans MS', cursive, sans-serif;
             color: #166534;
         }
@@ -17,10 +17,10 @@
 
         .hidden { display: none !important; }
 
-        #instruction { font-size: 2.5rem; text-align: center; padding: 20px; max-width: 800px; }
+        #instruction { font-size: 2.5rem; text-align: center; padding: 20px; max-width: 800px; min-height: 150px; }
 
         /* Container voor de afbeeldingen */
-        #image-container { height: 300px; display: flex; align-items: center; justify-content: center; }
+        #image-container { height: 350px; display: flex; align-items: center; justify-content: center; }
         #status-img { max-height: 100%; width: auto; border-radius: 20px; }
 
         #recipe { 
@@ -30,14 +30,17 @@
         }
         h2 { font-size: 3rem; margin-top: 0; }
         ul { text-align: left; font-size: 2rem; line-height: 1.5; }
+
+        /* Debug info klein onderaan */
+        #debug { position: fixed; bottom: 5px; font-size: 10px; color: #ccc; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <h1 id="instruction">Tik op het scherm om te starten...</h1>
+        <h1 id="instruction">Druk op de knop om te starten!</h1>
         <div id="image-container">
-            <img id="status-img" src="oesterzwam.png" alt="Ingrediënt">
+            <img id="status-img" src="oesterzwam.png" alt="Wachten op start...">
         </div>
     </div>
 
@@ -52,52 +55,74 @@
     </div>
 
     <audio id="audio-player"></audio>
+    <div id="debug">Systeem klaar...</div>
 
     <script>
+        // --- CONFIGURATIE ---
         const tagOesterzwam = "214503785897";
         const tagOlijfolie = "85065013890"; 
 
         const player = document.getElementById('audio-player');
         const statusImg = document.getElementById('status-img');
+        const instructionText = document.getElementById('instruction');
+        
         let step = 0;
         let lastScannedTag = "";
         let isProcessing = false;
 
+        // Functie voor playlist met audiofragmenten
         async function speelLijst(bestanden, tekst, nieuweImg) {
-            isProcessing = true; // Stop even met RFID checken tijdens het praten
-            document.getElementById('instruction').innerText = tekst;
+            isProcessing = true; 
+            instructionText.innerText = tekst;
             if(nieuweImg) statusImg.src = nieuweImg;
 
             for (const bestand of bestanden) {
                 await new Promise((resolve) => {
                     player.src = encodeURIComponent(bestand);
-                    player.play();
+                    player.play().catch(e => console.log("Audio play error:", e));
                     player.onended = resolve;
                 });
             }
             isProcessing = false;
         }
 
-        window.onclick = () => {
+        // De start-logica (nu in een aparte functie)
+        function activeerSpel() {
             if (step === 0) {
                 step = 1;
+                document.getElementById('debug').innerText = "Spel geactiveerd via knop/klik";
                 speelLijst(
                     ["Leuk We gaan dit rec.mp3", "Zoek de.mp3", "Oesterzwammen.mp3"],
-                    "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. Zoek de oesterzwammen.",
-                    "oesterzwam.png" // Zorg dat dit bestand in je map staat
+                    "Leuk, we gaan dit recept maken! Zoek de oesterzwammen.",
+                    "oesterzwam.png"
                 );
             }
-        };
+        }
 
+        // Klikken op het scherm werkt nog steeds als backup
+        window.onclick = activeerSpel;
+
+        // --- DE BELANGRIJKSTE LOOP ---
         setInterval(async () => {
-            if (step === 0 || step === 3 || isProcessing) return;
+            if (isProcessing) return; // Doe niets als de kabouter nog praat
 
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
                 const id = (await resp.text()).trim();
 
-                // Alleen actie als de tag NIEUW is of anders dan de vorige
-                if (id !== "" && id !== lastScannedTag) {
+                if (id === "") {
+                    lastScannedTag = ""; // Reset als bestand leeg is
+                    return;
+                }
+
+                // 1. Check voor de Fysieke Knop
+                if (id === "START_BUTTON") {
+                    activeerSpel();
+                    return;
+                }
+
+                // 2. Check voor RFID tags (alleen als spel gestart is)
+                if (step > 0 && step < 3 && id !== lastScannedTag) {
                     handleScan(id);
                     lastScannedTag = id; 
                 }
@@ -109,18 +134,17 @@
                 step = 2;
                 speelLijst(
                     ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Olijfolie.mp3"],
-                    "Goed zo! Zoek nu het volgende ingrediënt. Zoek de olijfolie.",
-                    "olijfolie.png" // Zorg dat dit bestand in je map staat
+                    "Goed zo! Zoek nu de olijfolie.",
+                    "olijfolie.png"
                 );
             } 
             else if (step === 2 && id === tagOlijfolie) {
                 step = 3;
                 speelLijst(
                     ["Goed gedaan We hebbe.mp3"],
-                    "Goed gedaan! We hebben alles om het recept klaar te maken. Hier is het recept."
+                    "Goed gedaan! We hebben nu alles."
                 );
                 
-                // Pas na 3 seconden switcht het scherm naar het recept
                 setTimeout(() => {
                     document.getElementById('game-container').classList.add('hidden');
                     document.getElementById('recipe').classList.remove('hidden');
