@@ -118,7 +118,10 @@
                 ],
                 eindAudio: ["Goed gedaan We hebbe.mp3"],
                 eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
-                receptItems: ["Scheur de oesterzwammen in reepjes.", "Verhit de olijfolie in de pan.", "Bak ze goudbruin in 5 minuten."]
+                receptItems: ["Maak de oesterzwammen schoon.", "Laat je kind eens ruiken aan de oesterzwammen.", "Verhit de pan met olijfolie op middelhoog vuur.", "Voeg de oesterzwammen toe en bak voor 5 – 7 minuten totdat
+ze goudbruin en krokant beginnen te worden.", "Knip ondertussen de kruiden fijn met een schaar in een glas.", "Doe de kruiden bij de oesterzwammen als de zwammen bijna
+gaar zijn.", "Leg de oesterzwammen als bomen op een bord en leg
+rozemarijn en tijm onderaan zodat ze het gras vormen.",]
             },
             "2": {
                 titel: "Tempeh Toverstaafjes",
@@ -129,7 +132,8 @@
                 ],
                 eindAudio: ["Goed gedaan We hebbe.mp3"], // Je kunt deze vervangen door een specifiek bestand
                 eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
-                receptItems: ["Snijd de tempeh in staafjes.", "Bak ze in rijstolie tot ze knapperig zijn.", "Serveer met de pindakaas saus."]
+                receptItems: ["Snijd de tempeh in dunne plakjes.", "Ruik en voel samen met je kind aan de tempeh.", "Verhit de olie in een wokpan.", "Bak de plakjes bruin en krokant.", "Laat afkoelen op keukenpapier.", ""Dop de toverstaafjes in een beetje 100% pindakaas en proef
+samen met je kind van de tempeh toverstaafjes."]
             }
         };
 
@@ -165,68 +169,73 @@
             huidigRecept = null;
             lastScannedTag = "";
             isProcessing = false;
-            waitingForButtonRelease = true;
             
             // UI herstellen
             document.body.classList.remove('active');
             document.body.classList.add('standby');
             document.getElementById('game-container').classList.add('hidden');
             document.getElementById('recipe-window').classList.add('hidden');
-            debug.innerText = "Systeem Standby";
+            debug.innerText = "Terug naar Standby...";
         }
-        
-        function startSpel(receptNummer) {
-            // Blokkeer als we nog aan het wachten zijn op loslaten vorige druk
-            if (waitingForButtonRelease) return;
-            
-            // Als we al in een spel zitten (stap 1, 2, 3...), negeren we de knop
-            if (step !== 0 && step !== 99) return;
 
+        function startSpel(receptNummer) {
+            // Als we al in een spel zitten (stap 1, 2, 3...), negeren we de knop volledig
+            if (step > 0 && step < 99) return;
+
+            // Als we op het eindscherm zijn (stap 99), dan resetten we alleen
+            if (step === 99) {
+                resetNaarStandby();
+                return;
+            }
+
+            // Start het spel (alleen als step 0 is)
             huidigRecept = recepten[receptNummer];
             step = 1;
             
             document.body.classList.remove('standby');
             document.body.classList.add('active');
             document.getElementById('game-container').classList.remove('hidden');
-            debug.innerText = "Recept " + receptNummer + " gestart";
 
             const eersteStap = huidigRecept.stappen[0];
-            speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! " + eersteStap.tekst, eersteStap.img);
+            speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. " + eersteStap.tekst, eersteStap.img);
         }
 
         setInterval(async () => {
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
-                const id = (await resp.text()).trim();
+                const data = (await resp.text()).trim();
 
-                // 1. Vrijgeven als knop is losgelaten
-                if (id === "") {
+                // 1. Als het bestand leeg is, reset de scan-geheugen
+                if (data === "") {
                     lastScannedTag = ""; 
-                    waitingForButtonRelease = false;
                     return;
                 }
 
-                // 2. RESET LOGICA: Als we op het einde zijn en er wordt gedrukt -> Direct naar standby
-                if (step === 99 && (id === "START_1" || id === "START_2")) {
-                    resetNaarStandby();
-                    return; // Stop deze loop hier, wacht op volgende interval
+                // 2. Knoppen hebben ALTIJD voorrang op isProcessing
+                if (data === "START_1") { 
+                    if (lastScannedTag !== "START_1") { // Voorkom herhaling zolang knop ingedrukt is
+                        startSpel("1"); 
+                        lastScannedTag = "START_1";
+                    }
+                    return; 
+                }
+                if (data === "START_2") { 
+                    if (lastScannedTag !== "START_2") {
+                        startSpel("2"); 
+                        lastScannedTag = "START_2";
+                    }
+                    return; 
                 }
 
-                // 3. START LOGICA: Alleen als we in standby staan (step 0)
-                if (step === 0) {
-                    if (id === "START_1") { startSpel("1"); return; }
-                    if (id === "START_2") { startSpel("2"); return; }
-                }
-
-                // 4. RFID LOGICA: Alleen tijdens het spel
+                // 3. RFID scannen mag alleen als we niet praten en in een spel zitten
                 if (isProcessing) return; 
 
-                if (step > 0 && step < 99 && huidigRecept && id !== lastScannedTag) {
-                    handleScan(id);
-                    lastScannedTag = id; 
+                if (step > 0 && step < 99 && huidigRecept && data !== lastScannedTag) {
+                    handleScan(data);
+                    lastScannedTag = data; 
                 }
             } catch (e) { }
-        }, 800);
+        }, 500); // Iets sneller checken (0.5 sec) voor betere respons
 
         function handleScan(id) {
             const huidigeStapData = huidigRecept.stappen[step-1];
