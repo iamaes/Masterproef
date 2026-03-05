@@ -290,7 +290,11 @@ lijst.appendChild(li)
 
 win.classList.remove("hidden")
 
-debug.innerText="Klaar! Druk op een knop voor standby."
+debug.innerText="Recept getoond - standby over 5 seconden"
+
+setTimeout(()=>{
+resetStandby()
+},5000)
 
 }
 
