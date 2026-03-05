@@ -132,7 +132,7 @@ rozemarijn en tijm onderaan zodat ze het gras vormen.",]
                 ],
                 eindAudio: ["Goed gedaan We hebbe.mp3"], // Je kunt deze vervangen door een specifiek bestand
                 eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
-                receptItems: ["Snijd de tempeh in dunne plakjes.", "Ruik en voel samen met je kind aan de tempeh.", "Verhit de olie in een wokpan.", "Bak de plakjes bruin en krokant.", "Laat afkoelen op keukenpapier.", ""Dop de toverstaafjes in een beetje 100% pindakaas en proef
+                receptItems: ["Snijd de tempeh in dunne plakjes.", "Ruik en voel samen met je kind aan de tempeh.", "Verhit de olie in een wokpan.", "Bak de plakjes bruin en krokant.", "Laat afkoelen op keukenpapier.", "Dop de toverstaafjes in een beetje 100% pindakaas en proef
 samen met je kind van de tempeh toverstaafjes."]
             }
         };
@@ -180,15 +180,17 @@ samen met je kind van de tempeh toverstaafjes."]
 
         function startSpel(receptNummer) {
 
-            // Als we midden in een spel zitten: negeren
+            // Als we midden in een spel zitten -> negeren
             if (step > 0 && step < 99) return;
         
-            // Als we op het eindscherm zitten: eerst resetten
+            // Als we op het eindscherm zitten -> reset
             if (step === 99) {
                 resetNaarStandby();
             }
         
-            // Start nieuw spel
+            // BELANGRIJK: reset scan geheugen
+            lastScannedTag = "";
+        
             huidigRecept = recepten[receptNummer];
             step = 1;
         
@@ -197,6 +199,7 @@ samen met je kind van de tempeh toverstaafjes."]
             document.getElementById('game-container').classList.remove('hidden');
         
             const eersteStap = huidigRecept.stappen[0];
+        
             speelLijst(
                 eersteStap.audio,
                 "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. " + eersteStap.tekst,
