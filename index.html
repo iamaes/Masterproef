@@ -157,8 +157,27 @@
             }
             isProcessing = false;
         }
-
+        
+        // --- NIEUWE RESET FUNCTIE ---
+        function resetNaarStandby() {
+            step = 0;
+            huidigRecept = null;
+            lastScannedTag = "";
+            isProcessing = false;
+            
+            // UI herstellen
+            document.body.classList.remove('active');
+            document.body.classList.add('standby');
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('recipe-window').classList.add('hidden');
+            debug.innerText = "Systeem Standby";
+        }
+        
         function startSpel(receptNummer) {
+            if (step === 99) {
+                resetNaarStandby();
+                return;
+            }
             if (step !== 0) return;
 
             huidigRecept = recepten[receptNummer];
@@ -192,7 +211,7 @@
                 if (id === "START_2") { startSpel("2"); return; }
 
                 // RFID checken
-                if (step > 0 && huidigRecept && id !== lastScannedTag) {
+                if (step > 0 && step < 99 && huidigRecept && id !== lastScannedTag) {
                     handleScan(id);
                     lastScannedTag = id; 
                 }
