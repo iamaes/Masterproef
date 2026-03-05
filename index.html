@@ -172,7 +172,7 @@
 
             // Start eerste stap
             const eersteStap = huidigRecept.stappen[0];
-            speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos." + eersteStap.tekst, eersteStap.img);
+            speelLijst(eersteStap.audio, "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. " + eersteStap.tekst, eersteStap.img);
         }
 
         setInterval(async () => {
@@ -209,7 +209,7 @@
                     // Ga naar de volgende stap
                     const volgendeData = huidigRecept.stappen[step];
                     step++;
-                    speelLijst(volgendeData.audio, "Goed zo! " + volgendeData.tekst, volgendeData.img);
+                    speelLijst(volgendeData.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgendeData.tekst, volgendeData.img);
                 } else {
                     // Recept is klaar
                     step = 99; // Finish status
