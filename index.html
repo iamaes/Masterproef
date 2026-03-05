@@ -198,23 +198,24 @@
         }
 
         setInterval(async () => {
-            if (isProcessing) return;
-
             try {
                 const resp = await fetch('last_tag.txt?t=' + Date.now());
                 const id = (await resp.text()).trim();
 
+                // BELANGRIJK: Dit moet ALTIJD gecheckt worden, ook tijdens audio
                 if (id === "") {
                     lastScannedTag = ""; 
                     waitingForButtonRelease = false;
                     return;
                 }
 
-                // Knoppen checken
+                // Knoppen checken (mag ook tijdens audio, want resetten moet altijd kunnen)
                 if (id === "START_1") { startSpel("1"); return; }
                 if (id === "START_2") { startSpel("2"); return; }
 
-                // RFID checken
+                // RFID checken (MAG NIET tijdens audio/processing)
+                if (isProcessing) return; 
+
                 if (step > 0 && step < 99 && huidigRecept && id !== lastScannedTag) {
                     handleScan(id);
                     lastScannedTag = id; 
@@ -223,19 +224,15 @@
         }, 800);
 
         function handleScan(id) {
-            const volgendeStapIndex = step; // stap 1 is index 0, dus volgende is index 1
             const huidigeStapData = huidigRecept.stappen[step-1];
 
-            // Controleren of de juiste tag gescand is
             if (id === huidigeStapData.tag) {
                 if (step < huidigRecept.stappen.length) {
-                    // Ga naar de volgende stap
                     const volgendeData = huidigRecept.stappen[step];
                     step++;
                     speelLijst(volgendeData.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgendeData.tekst, volgendeData.img);
                 } else {
-                    // Recept is klaar
-                    step = 99; // Finish status
+                    step = 99; 
                     speelLijst(huidigRecept.eindAudio, huidigRecept.eindTekst);
                     
                     setTimeout(() => {
@@ -261,6 +258,7 @@
             });
 
             win.classList.remove('hidden');
+            debug.innerText = "Klaar! Druk op een knop voor standby.";
         }
     </script>
 </body>
