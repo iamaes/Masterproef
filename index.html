@@ -45,12 +45,23 @@
         }
 
         #status-img { 
+            /* Maximaal 100% van de containerhoogte of de containerbreedte */
             max-height: 100%; 
-            max-width: 80%; 
-            height: auto;
+            max-width: 100%; 
+            
+            /* Behoudt de verhoudingen */
+            height: auto; 
+            width: auto;
+            
+            /* Optioneel: centreert de afbeelding in het containerblok */
+            display: block;
+            margin: auto;
+        
+            /* Je huidige stijl */
             border-radius: 30px; 
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border: 10px solid white;
+            box-sizing: border-box; /* Zorgt dat de rand binnen de max-afmetingen valt */
         }
 
         /* Het receptvenster */
