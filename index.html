@@ -36,32 +36,28 @@
 
         /* Afbeelding mooi in het midden en niet te groot */
         #image-container { 
-            flex: 1; /* Neemt de beschikbare ruimte in */
+            flex-grow: 1;
             display: flex; 
             align-items: center; 
             justify-content: center; 
             width: 100%;
-            max-height: 50vh; /* Nooit groter dan de helft van het scherm */
+            overflow: hidden; /* Zorgt dat er nooit een scrollbar komt door de foto */
+            padding: 20px;
+            box-sizing: border-box;
         }
-
-        #status-img { 
-            /* Maximaal 100% van de containerhoogte of de containerbreedte */
-            max-height: 100%; 
-            max-width: 100%; 
-            
-            /* Behoudt de verhoudingen */
-            height: auto; 
-            width: auto;
-            
-            /* Optioneel: centreert de afbeelding in het containerblok */
-            display: block;
-            margin: auto;
         
-            /* Je huidige stijl */
-            border-radius: 30px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border: 10px solid white;
-            box-sizing: border-box; /* Zorgt dat de rand binnen de max-afmetingen valt */
+        #status-img { 
+            /* DIT IS DE FIX: */
+            max-height: 50vh;    /* De foto mag nooit hoger zijn dan de helft van het scherm */
+            max-width: 90vw;     /* De foto mag nooit breder zijn dan bijna het hele scherm */
+            width: auto;         /* Houdt de verhouding goed */
+            height: auto;        /* Houdt de verhouding goed */
+            
+            display: block;
+            border-radius: 25px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            border: 8px solid white;
+            box-sizing: border-box;
         }
 
         /* Het receptvenster */
