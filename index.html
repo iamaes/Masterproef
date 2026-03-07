@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="nl" class="notranslate" translate="no">
 <head>
 <meta charset="UTF-8">
@@ -78,21 +77,7 @@ font-size:12px;
 color:rgba(0,0,0,0.2);
 }
 
-/* VIDEO */
-
-#video-player{
-position:fixed;
-top:0;
-left:0;
-width:100vw;
-height:100vh;
-object-fit:cover;
-background:black;
-z-index:1000;
-}
-
 </style>
-
 </head>
 
 <body class="standby">
@@ -111,11 +96,6 @@ z-index:1000;
 </div>
 
 <audio id="audio-player"></audio>
-
-<video id="video-player" class="hidden">
-<source src="Zwamzakken_lied.mp4" type="video/mp4">
-</video>
-
 <div id="debug">Systeem Standby - Druk op een knop</div>
 
 <script>
@@ -124,7 +104,6 @@ const player=document.getElementById("audio-player")
 const statusImg=document.getElementById("status-img")
 const instructionText=document.getElementById("instruction")
 const debug=document.getElementById("debug")
-const videoPlayer=document.getElementById("video-player")
 
 let state="standby"
 let step=0
@@ -174,28 +153,6 @@ receptItems:[
 }
 }
 
-/* ---------------- VIDEO ---------------- */
-
-function startVideo(){
-
-resetStandby()
-
-document.body.classList.remove("standby")
-document.body.classList.add("active")
-
-videoPlayer.classList.remove("hidden")
-videoPlayer.currentTime=0
-videoPlayer.play()
-
-debug.innerText="Video wordt afgespeeld"
-
-videoPlayer.onended=()=>{
-videoPlayer.classList.add("hidden")
-resetStandby()
-}
-
-}
-
 /* ---------------- AUDIO ---------------- */
 
 async function speelLijst(lijst,tekst,img){
@@ -209,7 +166,7 @@ for(const bestand of lijst){
 
 await new Promise(resolve=>{
 
-player.src=bestand
+player.src=encodeURIComponent(bestand)
 player.play().catch(()=>{})
 player.onended=resolve
 
@@ -232,8 +189,6 @@ lastTag=""
 
 player.pause()
 player.src=""
-
-videoPlayer.pause()
 
 document.body.classList.remove("active")
 document.body.classList.add("standby")
@@ -335,7 +290,7 @@ lijst.appendChild(li)
 
 win.classList.remove("hidden")
 
-debug.innerText="Recept getoond - standby over 10 seconden"
+debug.innerText="Recept getoond - standby over 5 seconden"
 
 setTimeout(()=>{
 resetStandby()
@@ -371,12 +326,6 @@ lastTag=data
 return
 }
 
-if(data==="START_VIDEO" && lastTag!=="START_VIDEO"){
-startVideo()
-lastTag=data
-return
-}
-
 if(data!==lastTag){
 handleScan(data)
 lastTag=data
@@ -387,6 +336,5 @@ lastTag=data
 },500)
 
 </script>
-
 </body>
 </html>
