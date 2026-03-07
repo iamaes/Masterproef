@@ -209,7 +209,7 @@ for(const bestand of lijst){
 
 await new Promise(resolve=>{
 
-player.src=encodeURIComponent(bestand)
+player.src=bestand
 player.play().catch(()=>{})
 player.onended=resolve
 
