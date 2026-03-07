@@ -185,11 +185,21 @@ videoPlayer.classList.remove("hidden")
 
 videoPlayer.currentTime=0
 
+videoPlayer.muted = false
+videoPlayer.volume = 1.0
+
 videoPlayer.play().catch(()=>{})
 
 videoPlayer.onended=()=>{
+
+videoPlayer.pause()
+videoPlayer.currentTime = 0
+videoPlayer.src = videoPlayer.src
+
 videoPlayer.classList.add("hidden")
+
 resetStandby()
+
 }
 
 }
