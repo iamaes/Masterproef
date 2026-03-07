@@ -77,19 +77,6 @@ font-size:12px;
 color:rgba(0,0,0,0.2);
 }
 
-/* VIDEO FULLSCREEN */
-
-#video-player{
-position:fixed;
-top:0;
-left:0;
-width:100vw;
-height:100vh;
-object-fit:cover;
-background:black;
-z-index:9999;
-}
-
 </style>
 </head>
 
@@ -109,18 +96,11 @@ z-index:9999;
 </div>
 
 <audio id="audio-player"></audio>
-
-<!-- VIDEO PLAYER -->
-<video id="video-player" class="hidden" autoplay playsinline>
-<source src="Zwamzakken_lied.mp4" type="video/mp4">
-</video>
-
 <div id="debug">Systeem Standby - Druk op een knop</div>
 
 <script>
 
 const player=document.getElementById("audio-player")
-const videoPlayer=document.getElementById("video-player")
 const statusImg=document.getElementById("status-img")
 const instructionText=document.getElementById("instruction")
 const debug=document.getElementById("debug")
@@ -173,37 +153,6 @@ receptItems:[
 }
 }
 
-/* ---------------- VIDEO ---------------- */
-
-function speelVideo(){
-
-resetStandby()
-
-state="video"
-
-videoPlayer.classList.remove("hidden")
-
-videoPlayer.currentTime=0
-
-videoPlayer.muted = false
-videoPlayer.volume = 1.0
-
-videoPlayer.play().catch(()=>{})
-
-videoPlayer.onended=()=>{
-
-videoPlayer.pause()
-videoPlayer.currentTime = 0
-videoPlayer.src = videoPlayer.src
-
-videoPlayer.classList.add("hidden")
-
-resetStandby()
-
-}
-
-}
-
 /* ---------------- AUDIO ---------------- */
 
 async function speelLijst(lijst,tekst,img){
@@ -241,9 +190,6 @@ lastTag=""
 player.pause()
 player.src=""
 
-videoPlayer.pause()
-videoPlayer.classList.add("hidden")
-
 document.body.classList.remove("active")
 document.body.classList.add("standby")
 
@@ -258,7 +204,7 @@ debug.innerText="Systeem Standby - Druk op een knop"
 
 function startSpel(id){
 
-if(state==="playing" || state==="video") return
+if(state==="playing")return
 
 huidigRecept=recepten[id]
 
@@ -363,12 +309,6 @@ const data=(await resp.text()).trim()
 
 if(data===""){
 lastTag=""
-return
-}
-
-if(data==="START_VIDEO" && lastTag!=="START_VIDEO"){
-speelVideo()
-lastTag=data
 return
 }
 
