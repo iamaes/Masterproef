@@ -1,340 +1,319 @@
 <!DOCTYPE html>
 <html lang="nl" class="notranslate" translate="no">
 <head>
-<meta charset="UTF-8">
-<meta name="google" content="notranslate"/>
-<title>Masterproef - Interactief Recept</title>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate"/>
+    <title>Masterproef - Interactief Recept</title>
 
-<style>
+    <style>
+        html, body {
+            height:100%;
+            margin:0;
+            overflow:hidden;
+            font-family:'Comic Sans MS', cursive, sans-serif;
+            transition:background-color 0.5s ease;
+        }
 
-html, body {
-height:100%;
-margin:0;
-overflow:hidden;
-font-family:'Comic Sans MS', cursive, sans-serif;
-transition:background-color 0.5s ease;
-}
+        body.standby{
+            background:#2d3436;
+            color:#2d3436;
+        }
 
-body.standby{
-background:#2d3436;
-color:#2d3436;
-}
+        body.active{
+            background:#ffffff;
+            color:#166534;
+        }
 
-body.active{
-background:#ffffff;
-color:#166534;
-}
+        body{
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            padding:40px;
+            box-sizing:border-box;
+        }
 
-body{
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-padding:40px;
-box-sizing:border-box;
-}
+        .hidden{display:none!important;}
 
-.hidden{display:none!important;}
+        #instruction{
+            font-size:2.2rem;
+            text-align:center;
+            margin-bottom:30px;
+            max-width:900px;
+        }
 
-#instruction{
-font-size:2.2rem;
-text-align:center;
-margin-bottom:30px;
-max-width:900px;
-}
+        #image-container{
+            flex-grow:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            width:100%;
+        }
 
-#image-container{
-flex-grow:1;
-display:flex;
-align-items:center;
-justify-content:center;
-width:100%;
-}
+        #status-img{
+            max-height:50vh;
+            max-width:90vw;
+            border-radius:25px;
+            border:8px solid white;
+        }
 
-#status-img{
-max-height:50vh;
-max-width:90vw;
-border-radius:25px;
-border:8px solid white;
-}
+        #recipe-window{
+            background:white;
+            border:8px solid #166534;
+            padding:40px;
+            border-radius:40px;
+            max-width:80%;
+        }
 
-#recipe-window{
-background:white;
-border:8px solid #166534;
-padding:40px;
-border-radius:40px;
-max-width:80%;
-}
+        h2{font-size:2.8rem;margin-top:0;color:#14532d;}
+        ul{text-align:left;font-size:1.7rem;line-height:1.6;}
 
-h2{font-size:2.8rem;margin-top:0;color:#14532d;}
-ul{text-align:left;font-size:1.7rem;line-height:1.6;}
+        /* VIDEO STYLING */
+        #video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-#debug{
-position:fixed;
-bottom:10px;
-right:10px;
-font-size:12px;
-color:rgba(0,0,0,0.2);
-}
+        #recept-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
 
-</style>
+        #debug{
+            position:fixed;
+            bottom:10px;
+            right:10px;
+            font-size:12px;
+            color:rgba(0,0,0,0.2);
+            z-index: 101;
+        }
+    </style>
 </head>
 
 <body class="standby">
 
-<div id="game-container" class="hidden">
-<h1 id="instruction">Laden...</h1>
-
-<div id="image-container">
-<img id="status-img" src="">
-</div>
-</div>
-
-<div id="recipe-window" class="hidden">
-<h2 id="recipe-title"></h2>
-<ul id="recipe-list"></ul>
-</div>
-
-<audio id="audio-player"></audio>
-<div id="debug">Systeem Standby - Druk op een knop</div>
-
-<script>
-
-const player=document.getElementById("audio-player")
-const statusImg=document.getElementById("status-img")
-const instructionText=document.getElementById("instruction")
-const debug=document.getElementById("debug")
-
-let state="standby"
-let step=0
-let huidigRecept=null
-let lastTag=""
-let isProcessing=false
-
-/* ---------------- RECEPT DATA ---------------- */
-
-const recepten={
-"1":{
-titel:"Knapperige Kabouterhapjes",
-stappen:[
-{tag:"214503785897",img:"oesterzwam.png",audio:["Knapperige kabouterh.mp3","Leuk We gaan dit rec.mp3","Zoek de.mp3","Oesterzwammen.mp3"],tekst:"Zoek de oesterzwammen."},
-{tag:"85065013890",img:"olijfolie.png",audio:["Goed zo Zoek nu het .mp3","Zoek de.mp3","Olijfolie.mp3"],tekst:"Zoek de olijfolie."}
-],
-eindAudio:["Goed gedaan We hebbe.mp3"],
-eindTekst:"Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
-receptItems:[
-"Maak de oesterzwammen schoon.",
-"Laat je kind eens ruiken aan de oesterzwammen.",
-"Verhit de pan met olijfolie op middelhoog vuur.",
-"Voeg de oesterzwammen toe en bak voor 5 – 7 minuten totdat ze goudbruin en krokant beginnen te worden.",
-"Knip ondertussen de kruiden fijn met een schaar in een glas.",
-" Doe de kruiden bij de oesterzwammen als de zwammen bijna gaar zijn.",
-"Leg de oesterzwammen als bomen op een bord en leg rozemarijn en tijm onderaan zodat ze het gras vormen."
-]
-},
-
-"2":{
-titel:"Tempeh Toverstaafjes",
-stappen:[
-{tag:"214503785897",img:"tempeh.png",audio:["Tempee toverstaafjes.mp3","Leuk We gaan dit rec.mp3","Zoek de.mp3","Tempee.mp3"],tekst:"Zoek de tempeh."},
-{tag:"85065013890",img:"rijstolie.png",audio:["Goed zo Zoek nu het .mp3","Zoek de.mp3","Rijstolie.mp3"],tekst:"Zoek de rijstolie."},
-{tag:"1074655182338",img:"pindakaas.png",audio:["Goed zo Zoek nu het .mp3","Zoek de.mp3","Pindakaas.mp3"],tekst:"Zoek de pindakaas."}
-],
-eindAudio:["Goed gedaan We hebbe.mp3"],
-eindTekst:"Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
-receptItems:[
-"Snijd de tempeh in dunne plakjes.",
-"Ruik en voel samen met je kind aan de tempeh.",
-"Verhit de olie in een wokpan.",
-"Bak de plakjes bruin en krokant.",
-"Laat afkoelen op keukenpapier.",
-"Dop de toverstaafjes in een beetje 100% pindakaas en proef samen met je kind van de tempeh toverstaafjes."
-]
-}
-}
-
-/* ---------------- AUDIO ---------------- */
-
-async function speelLijst(lijst,tekst,img){
-
-isProcessing=true
-instructionText.innerText=tekst
-
-if(img)statusImg.src=img
-
-for(const bestand of lijst){
-
-await new Promise(resolve=>{
-
-player.src=encodeURIComponent(bestand)
-player.play().catch(()=>{})
-player.onended=resolve
-
-})
-
-}
-
-isProcessing=false
-
-}
-
-/* ---------------- RESET ---------------- */
-
-function resetStandby(){
-
-state="standby"
-step=0
-huidigRecept=null
-lastTag=""
-
-player.pause()
-player.src=""
-
-document.body.classList.remove("active")
-document.body.classList.add("standby")
-
-document.getElementById("game-container").classList.add("hidden")
-document.getElementById("recipe-window").classList.add("hidden")
-
-debug.innerText="Systeem Standby - Druk op een knop"
-
-}
-
-/* ---------------- START SPEL ---------------- */
-
-function startSpel(id){
-
-if(state==="playing")return
-
-huidigRecept=recepten[id]
-
-state="playing"
-step=0
-
-document.body.classList.remove("standby")
-document.body.classList.add("active")
-
-document.getElementById("game-container").classList.remove("hidden")
-
-const eerste=huidigRecept.stappen[0]
-
-speelLijst(
-eerste.audio,
-"Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. "+eerste.tekst,
-eerste.img
-)
-
-}
-
-/* ---------------- RFID SCAN ---------------- */
-
-function handleScan(tag){
-
-if(state!=="playing")return
-if(isProcessing)return
-
-const stapData=huidigRecept.stappen[step]
-
-if(tag===stapData.tag){
-
-step++
-
-if(step<huidigRecept.stappen.length){
-
-const volgende=huidigRecept.stappen[step]
-
-speelLijst(
-volgende.audio,
-"Goed zo! Zoek nu het volgende ingrediënt. "+volgende.tekst,
-volgende.img
-)
-
-}else{
-
-state="recipe"
-
-speelLijst(huidigRecept.eindAudio,huidigRecept.eindTekst)
-
-setTimeout(toonRecept,4000)
-
-}
-
-}else{
-
-debug.innerText="Verkeerde tag: "+tag
-
-}
-
-}
-
-/* ---------------- RECEPT TONEN ---------------- */
-
-function toonRecept(){
-
-document.getElementById("game-container").classList.add("hidden")
-
-const win=document.getElementById("recipe-window")
-const lijst=document.getElementById("recipe-list")
-
-document.getElementById("recipe-title").innerText=huidigRecept.titel
-
-lijst.innerHTML=""
-
-huidigRecept.receptItems.forEach(item=>{
-
-const li=document.createElement("li")
-li.innerText=item
-lijst.appendChild(li)
-
-})
-
-win.classList.remove("hidden")
-
-debug.innerText="Recept getoond - standby over 5 seconden"
-
-setTimeout(()=>{
-resetStandby()
-},10000)
-
-}
-
-/* ---------------- TAG POLLING ---------------- */
-
-setInterval(async()=>{
-
-try{
-
-const resp=await fetch("last_tag.txt?t="+Date.now())
-const data=(await resp.text()).trim()
-
-if(data===""){
-lastTag=""
-return
-}
-
-if(data==="START_1" && lastTag!=="START_1"){
-if(state==="recipe")resetStandby()
-startSpel("1")
-lastTag=data
-return
-}
-
-if(data==="START_2" && lastTag!=="START_2"){
-if(state==="recipe")resetStandby()
-startSpel("2")
-lastTag=data
-return
-}
-
-if(data!==lastTag){
-handleScan(data)
-lastTag=data
-}
-
-}catch(e){}
-
-},500)
-
-</script>
+    <div id="video-container" class="hidden">
+        <video id="recept-video" src="Zwamzakken_lied.mp4"></video>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <h1 id="instruction">Laden...</h1>
+        <div id="image-container">
+            <img id="status-img" src="">
+        </div>
+    </div>
+
+    <div id="recipe-window" class="hidden">
+        <h2 id="recipe-title"></h2>
+        <ul id="recipe-list"></ul>
+    </div>
+
+    <audio id="audio-player"></audio>
+    <div id="debug">Systeem Standby - Druk op een knop</div>
+
+    <script>
+        const player = document.getElementById("audio-player");
+        const statusImg = document.getElementById("status-img");
+        const instructionText = document.getElementById("instruction");
+        const debug = document.getElementById("debug");
+        const videoContainer = document.getElementById("video-container");
+        const videoPlayer = document.getElementById("recept-video");
+
+        let state = "standby";
+        let step = 0;
+        let huidigRecept = null;
+        let lastTag = "";
+        let isProcessing = false;
+
+        const recepten = {
+            "1": {
+                titel: "Knapperige Kabouterhapjes",
+                stappen: [
+                    {tag: "214503785897", img: "oesterzwam.png", audio: ["Knapperige kabouterh.mp3", "Leuk We gaan dit rec.mp3", "Zoek de.mp3", "Oesterzwammen.mp3"], tekst: "Zoek de oesterzwammen."},
+                    {tag: "85065013890", img: "olijfolie.png", audio: ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Olijfolie.mp3"], tekst: "Zoek de olijfolie."}
+                ],
+                eindAudio: ["Goed gedaan We hebbe.mp3"],
+                eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
+                receptItems: [
+                    "Maak de oesterzwammen schoon.",
+                    "Laat je kind eens ruiken aan de oesterzwammen.",
+                    "Verhit de pan met olijfolie op middelhoog vuur.",
+                    "Voeg de oesterzwammen toe en bak voor 5 – 7 minuten totdat ze goudbruin en krokant beginnen te worden.",
+                    "Knip ondertussen de kruiden fijn met een schaar in een glas.",
+                    " Doe de kruiden bij de oesterzwammen als de zwammen bijna gaar zijn.",
+                    "Leg de oesterzwammen als bomen op een bord en leg rozemarijn en tijm onderaan zodat ze het gras vormen."
+                ]
+            },
+            "2": {
+                titel: "Tempeh Toverstaafjes",
+                stappen: [
+                    {tag: "214503785897", img: "tempeh.png", audio: ["Tempee toverstaafjes.mp3", "Leuk We gaan dit rec.mp3", "Zoek de.mp3", "Tempee.mp3"], tekst: "Zoek de tempeh."},
+                    {tag: "85065013890", img: "rijstolie.png", audio: ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Rijstolie.mp3"], tekst: "Zoek de rijstolie."},
+                    {tag: "1074655182338", img: "pindakaas.png", audio: ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Pindakaas.mp3"], tekst: "Zoek de pindakaas."}
+                ],
+                eindAudio: ["Goed gedaan We hebbe.mp3"],
+                eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
+                receptItems: [
+                    "Snijd de tempeh in dunne plakjes.",
+                    "Ruik en voel samen met je kind aan de tempeh.",
+                    "Verhit de olie in een wokpan.",
+                    "Bak de plakjes bruin en krokant.",
+                    "Laat afkoelen op keukenpapier.",
+                    "Dop de toverstaafjes in een beetje 100% pindakaas en proef samen met je kind van de tempeh toverstaafjes."
+                ]
+            }
+        };
+
+        async function speelLijst(lijst, tekst, img) {
+            isProcessing = true;
+            instructionText.innerText = tekst;
+            if (img) statusImg.src = img;
+
+            for (const bestand of lijst) {
+                await new Promise(resolve => {
+                    player.src = encodeURIComponent(bestand);
+                    player.play().catch(() => {});
+                    player.onended = resolve;
+                });
+            }
+            isProcessing = false;
+        }
+
+        function resetStandby() {
+            state = "standby";
+            step = 0;
+            huidigRecept = null;
+            lastTag = "";
+
+            player.pause();
+            player.src = "";
+            videoPlayer.pause(); // Stop video bij reset
+            videoContainer.classList.add("hidden");
+
+            document.body.classList.remove("active");
+            document.body.classList.add("standby");
+            document.getElementById("game-container").classList.add("hidden");
+            document.getElementById("recipe-window").classList.add("hidden");
+
+            debug.innerText = "Systeem Standby - Druk op een knop";
+        }
+
+        function startSpel(id) {
+            // Stop video als die nog speelde
+            videoPlayer.pause();
+            videoContainer.classList.add("hidden");
+
+            huidigRecept = recepten[id];
+            state = "playing";
+            step = 0;
+
+            document.body.classList.remove("standby");
+            document.body.classList.add("active");
+            document.getElementById("game-container").classList.remove("hidden");
+
+            const eerste = huidigRecept.stappen[0];
+            speelLijst(eerste.audio, "Leuk, we gaan dit recept maken! " + eerste.tekst, eerste.img);
+        }
+
+        function startVideo() {
+            state = "video";
+            player.pause(); // Stop kabouter audio
+            isProcessing = false;
+
+            videoContainer.classList.remove("hidden");
+            videoPlayer.currentTime = 0;
+            videoPlayer.play();
+
+            videoPlayer.onended = () => {
+                resetStandby();
+            };
+        }
+
+        function handleScan(tag) {
+            if (state !== "playing" || isProcessing) return;
+
+            const stapData = huidigRecept.stappen[step];
+            if (tag === stapData.tag) {
+                step++;
+                if (step < huidigRecept.stappen.length) {
+                    const volgende = huidigRecept.stappen[step];
+                    speelLijst(volgende.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgende.tekst, volgende.img);
+                } else {
+                    state = "recipe";
+                    speelLijst(huidigRecept.eindAudio, huidigRecept.eindTekst);
+                    setTimeout(toonRecept, 4000);
+                }
+            } else {
+                debug.innerText = "Verkeerde tag: " + tag;
+            }
+        }
+
+        function toonRecept() {
+            document.getElementById("game-container").classList.add("hidden");
+            const win = document.getElementById("recipe-window");
+            const lijst = document.getElementById("recipe-list");
+
+            document.getElementById("recipe-title").innerText = huidigRecept.titel;
+            lijst.innerHTML = "";
+            huidigRecept.receptItems.forEach(item => {
+                const li = document.createElement("li");
+                li.innerText = item;
+                lijst.appendChild(li);
+            });
+
+            win.classList.remove("hidden");
+            debug.innerText = "Recept getoond - standby over 10 seconden";
+            setTimeout(() => { if(state === "recipe") resetStandby(); }, 10000);
+        }
+
+        setInterval(async () => {
+            try {
+                const resp = await fetch("last_tag.txt?t=" + Date.now());
+                const data = (await resp.text()).trim();
+
+                if (data === "") {
+                    lastTag = "";
+                    return;
+                }
+
+                // NIEUWE KNOP VOOR VIDEO
+                if (data === "START_VIDEO" && lastTag !== "START_VIDEO") {
+                    startVideo();
+                    lastTag = data;
+                    return;
+                }
+
+                if (data === "START_1" && lastTag !== "START_1") {
+                    resetStandby();
+                    startSpel("1");
+                    lastTag = data;
+                    return;
+                }
+
+                if (data === "START_2" && lastTag !== "START_2") {
+                    resetStandby();
+                    startSpel("2");
+                    lastTag = data;
+                    return;
+                }
+
+                if (data !== lastTag) {
+                    handleScan(data);
+                    lastTag = data;
+                }
+
+            } catch (e) {}
+        }, 500);
+
+    </script>
 </body>
 </html>
