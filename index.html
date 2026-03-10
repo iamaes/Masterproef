@@ -234,7 +234,7 @@ function resetStandby() {
     state = "standby";
     step = 0;
     huidigRecept = null;
-    lastTag = "";
+    // lastTag = "";  <-- VERWIJDER OF COMMENTEER DEZE REGEL
 
     // Stop audio
     player.pause();
@@ -244,8 +244,6 @@ function resetStandby() {
     videoPlayer.pause();
     videoContainer.classList.add("hidden");
     
-    // Door de src even weg te halen en terug te zetten, 
-    // "vergeet" de browser dat hij aan het spelen was.
     const currentSrc = videoPlayer.src;
     videoPlayer.src = ""; 
     videoPlayer.load();
@@ -259,7 +257,7 @@ function resetStandby() {
 
     debug.innerText = "Systeem Standby - Druk op een knop";
 }
-
+    
 /* ---------------- VIDEO ---------------- */
 function startLiedje() {
     if (state === "video") return; 
