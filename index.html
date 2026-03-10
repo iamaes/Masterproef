@@ -58,6 +58,25 @@ border-radius:25px;
 border:8px solid white;
 }
 
+#video-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+    z-index: 999; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; 
+}
+
 #recipe-window{
 background:white;
 border:8px solid #166534;
@@ -95,6 +114,10 @@ color:rgba(0,0,0,0.2);
 <ul id="recipe-list"></ul>
 </div>
 
+<div id="video-container" class="hidden">
+    <video id="recept-video" src="Zwamzakken_lied.mp4"></video>
+</div>
+
 <audio id="audio-player"></audio>
 <div id="debug">Systeem Standby - Druk op een knop</div>
 
@@ -104,6 +127,8 @@ const player=document.getElementById("audio-player")
 const statusImg=document.getElementById("status-img")
 const instructionText=document.getElementById("instruction")
 const debug=document.getElementById("debug")
+const videoContainer = document.getElementById("video-container");
+const videoPlayer = document.getElementById("recept-video");
 
 let state="standby"
 let step=0
@@ -224,6 +249,22 @@ document.getElementById("recipe-window").classList.add("hidden")
 
 debug.innerText="Systeem Standby - Druk op een knop"
 
+}
+
+/* ---------------- VIDEO ---------------- */
+function startLiedje() {
+    state = "video";
+    player.pause(); // Stop eventuele kabouter-audio
+    
+    videoContainer.classList.remove("hidden");
+    videoPlayer.currentTime = 0; // Begin bij het begin
+    videoPlayer.play();
+
+    // Wanneer de video klaar is: terug naar standby
+    videoPlayer.onended = () => {
+        videoContainer.classList.add("hidden");
+        resetStandby();
+    };
 }
 
 /* ---------------- START SPEL ---------------- */
@@ -357,6 +398,12 @@ if(state==="recipe")resetStandby()
 startSpel("3")
 lastTag=data
 return
+}
+
+if (data === "START_VIDEO" && lastTag !== "START_VIDEO") {
+    startLiedje();
+    lastTag = data;
+    return;
 }
   
 if(data!==lastTag){
