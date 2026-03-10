@@ -231,68 +231,75 @@ isProcessing=false
 
 /* ---------------- RESET ---------------- */
 
-function resetStandby(){
+function resetStandby() {
+    state = "standby";
+    step = 0;
+    huidigRecept = null;
+    lastTag = "";
 
-state="standby"
-step=0
-huidigRecept=null
-lastTag=""
+    // Stop audio
+    player.pause();
+    player.src = "";
 
-player.pause()
-player.src=""
+    // STOP EN VERBERG VIDEO
+    videoPlayer.pause();
+    videoPlayer.currentTime = 0;
+    videoContainer.classList.add("hidden");
 
-document.body.classList.remove("active")
-document.body.classList.add("standby")
+    document.body.classList.remove("active");
+    document.body.classList.add("standby");
 
-document.getElementById("game-container").classList.add("hidden")
-document.getElementById("recipe-window").classList.add("hidden")
+    document.getElementById("game-container").classList.add("hidden");
+    document.getElementById("recipe-window").classList.add("hidden");
 
-debug.innerText="Systeem Standby - Druk op een knop"
-
+    debug.innerText = "Systeem Standby - Druk op een knop";
 }
 
 /* ---------------- VIDEO ---------------- */
 function startLiedje() {
+    // Als we al een video spelen, doen we niets om herhaling te voorkomen
+    if (state === "video") return;
+
     state = "video";
-    player.pause(); // Stop eventuele kabouter-audio
+    player.pause(); // Stop kabouter-audio
     
     videoContainer.classList.remove("hidden");
-    videoPlayer.currentTime = 0; // Begin bij het begin
+    videoPlayer.currentTime = 0; 
+    videoPlayer.loop = false; // Zorg dat hij NIET herhaalt
     videoPlayer.play();
 
     // Wanneer de video klaar is: terug naar standby
     videoPlayer.onended = () => {
-        videoContainer.classList.add("hidden");
         resetStandby();
     };
 }
 
 /* ---------------- START SPEL ---------------- */
 
-function startSpel(id){
+function startSpel(id) {
+    // NIEUW: Als er nog een video speelt, stop deze direct
+    videoPlayer.pause();
+    videoContainer.classList.add("hidden");
+    
+    if (state === "playing") return;
 
-if(state==="playing")return
+    huidigRecept = recepten[id];
+    state = "playing";
+    step = 0;
 
-huidigRecept=recepten[id]
+    document.body.classList.remove("standby");
+    document.body.classList.add("active");
 
-state="playing"
-step=0
+    document.getElementById("game-container").classList.remove("hidden");
 
-document.body.classList.remove("standby")
-document.body.classList.add("active")
+    const eerste = huidigRecept.stappen[0];
 
-document.getElementById("game-container").classList.remove("hidden")
-
-const eerste=huidigRecept.stappen[0]
-
-speelLijst(
-eerste.audio,
-"Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. "+eerste.tekst,
-eerste.img
-)
-
+    speelLijst(
+        eerste.audio,
+        "Leuk, we gaan dit recept maken! Houd het juiste kaartje bovenop de doos. " + eerste.tekst,
+        eerste.img
+    );
 }
-
 /* ---------------- RFID SCAN ---------------- */
 
 function handleScan(tag){
