@@ -352,6 +352,13 @@ lastTag=data
 return
 }
 
+if(data==="START_3" && lastTag!=="START_3"){
+if(state==="recipe")resetStandby()
+startSpel("3")
+lastTag=data
+return
+}
+  
 if(data!==lastTag){
 handleScan(data)
 lastTag=data
