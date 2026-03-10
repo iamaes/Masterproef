@@ -115,7 +115,7 @@ color:rgba(0,0,0,0.2);
 </div>
 
 <div id="video-container" class="hidden">
-    <video id="recept-video" src="Zwamzakken_lied.mp4"></video>
+    <video id="recept-video" src="Zwamzakken_lied.mp4" preload="auto"></video>
 </div>
 
 <audio id="audio-player"></audio>
@@ -230,7 +230,6 @@ isProcessing=false
 }
 
 /* ---------------- RESET ---------------- */
-
 function resetStandby() {
     state = "standby";
     step = 0;
@@ -241,10 +240,16 @@ function resetStandby() {
     player.pause();
     player.src = "";
 
-    // STOP EN VERBERG VIDEO
+    // STOP EN RESET VIDEO GRONDIG
     videoPlayer.pause();
-    videoPlayer.currentTime = 0;
     videoContainer.classList.add("hidden");
+    
+    // Door de src even weg te halen en terug te zetten, 
+    // "vergeet" de browser dat hij aan het spelen was.
+    const currentSrc = videoPlayer.src;
+    videoPlayer.src = ""; 
+    videoPlayer.load();
+    videoPlayer.src = currentSrc; 
 
     document.body.classList.remove("active");
     document.body.classList.add("standby");
@@ -257,20 +262,20 @@ function resetStandby() {
 
 /* ---------------- VIDEO ---------------- */
 function startLiedje() {
-    if (state === "video") return; // Reeds aan het spelen? Doe niets.
+    if (state === "video") return; 
 
     state = "video";
     player.pause(); 
     
     videoContainer.classList.remove("hidden");
-    videoPlayer.removeAttribute('loop'); // Forceer GEEN loop
+    
+    videoPlayer.loop = false; // Dubbele check: GEEN loop
     videoPlayer.currentTime = 0; 
-    videoPlayer.play();
+    videoPlayer.play().catch(e => console.log("Video play error:", e));
 
+    // Wanneer de video klaar is
     videoPlayer.onended = () => {
-        // Belangrijk: we gaan naar standby, maar we wissen lastTag NIET handmatig
-        // De setInterval loop doet dat pas als het tekstbestand echt leeg is.
-        videoContainer.classList.add("hidden");
+        console.log("Video afgelopen, terug naar standby");
         resetStandby();
     };
 }
@@ -374,57 +379,37 @@ resetStandby()
 }
 
 /* ---------------- TAG POLLING ---------------- */
-
 setInterval(async () => {
     try {
         const resp = await fetch("last_tag.txt?t=" + Date.now());
         const data = (await resp.text()).trim();
 
-        // Als het bestand leeg is, resetten we lastTag. 
-        // Dit is het "vrijgeven" van de knop.
+        // 1. Als het bestand leeg is, resetten we het geheugen
         if (data === "") {
             lastTag = "";
             return;
         }
 
-        // Als we dezelfde tag zien als de vorige keer, doen we NIETS.
-        // Dit voorkomt dat het liedje herstart terwijl START_VIDEO nog in het bestand staat.
+        // 2. Als we dezelfde knop nog steeds zien (omdat Python traag wist), niets doen
         if (data === lastTag) return;
 
+        // 3. Verwerk de nieuwe actie
         if (data === "START_VIDEO") {
+            lastTag = data; // Eerst opslaan om dubbele trigger te voorkomen
             startLiedje();
-            lastTag = data; // Onthoud dat we deze knop al verwerkt hebben
-            return;
-        }
-
-        if (data === "START_1") {
-            if (state === "recipe" || state === "video") resetStandby();
-            startSpel("1");
+        } else if (data === "START_1" || data === "START_2" || data === "START_3") {
             lastTag = data;
-            return;
-        }
-
-        if (data === "START_2") {
             if (state === "recipe" || state === "video") resetStandby();
-            startSpel("2");
-            lastTag = data;
-            return;
-        }
-
-        if (data === "START_3") {
-            if (state === "recipe" || state === "video") resetStandby();
-            startSpel("3");
-            lastTag = data;
-            return;
-        }
-
-        // RFID Scans
-        if (data !== lastTag) {
+            startSpel(data.split('_')[1]); 
+        } else if (state === "playing" && !isProcessing) {
+            // RFID scan
             handleScan(data);
             lastTag = data;
         }
 
-    } catch (e) {}
+    } catch (e) {
+        console.error("Polling error:", e);
+    }
 }, 500);
 
 </script>
