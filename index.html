@@ -257,19 +257,20 @@ function resetStandby() {
 
 /* ---------------- VIDEO ---------------- */
 function startLiedje() {
-    // Als we al een video spelen, doen we niets om herhaling te voorkomen
-    if (state === "video") return;
+    if (state === "video") return; // Reeds aan het spelen? Doe niets.
 
     state = "video";
-    player.pause(); // Stop kabouter-audio
+    player.pause(); 
     
     videoContainer.classList.remove("hidden");
+    videoPlayer.removeAttribute('loop'); // Forceer GEEN loop
     videoPlayer.currentTime = 0; 
-    videoPlayer.loop = false; // Zorg dat hij NIET herhaalt
     videoPlayer.play();
 
-    // Wanneer de video klaar is: terug naar standby
     videoPlayer.onended = () => {
+        // Belangrijk: we gaan naar standby, maar we wissen lastTag NIET handmatig
+        // De setInterval loop doet dat pas als het tekstbestand echt leeg is.
+        videoContainer.classList.add("hidden");
         resetStandby();
     };
 }
@@ -374,53 +375,57 @@ resetStandby()
 
 /* ---------------- TAG POLLING ---------------- */
 
-setInterval(async()=>{
+setInterval(async () => {
+    try {
+        const resp = await fetch("last_tag.txt?t=" + Date.now());
+        const data = (await resp.text()).trim();
 
-try{
+        // Als het bestand leeg is, resetten we lastTag. 
+        // Dit is het "vrijgeven" van de knop.
+        if (data === "") {
+            lastTag = "";
+            return;
+        }
 
-const resp=await fetch("last_tag.txt?t="+Date.now())
-const data=(await resp.text()).trim()
+        // Als we dezelfde tag zien als de vorige keer, doen we NIETS.
+        // Dit voorkomt dat het liedje herstart terwijl START_VIDEO nog in het bestand staat.
+        if (data === lastTag) return;
 
-if(data===""){
-lastTag=""
-return
-}
+        if (data === "START_VIDEO") {
+            startLiedje();
+            lastTag = data; // Onthoud dat we deze knop al verwerkt hebben
+            return;
+        }
 
-if(data==="START_1" && lastTag!=="START_1"){
-if(state==="recipe")resetStandby()
-startSpel("1")
-lastTag=data
-return
-}
+        if (data === "START_1") {
+            if (state === "recipe" || state === "video") resetStandby();
+            startSpel("1");
+            lastTag = data;
+            return;
+        }
 
-if(data==="START_2" && lastTag!=="START_2"){
-if(state==="recipe")resetStandby()
-startSpel("2")
-lastTag=data
-return
-}
+        if (data === "START_2") {
+            if (state === "recipe" || state === "video") resetStandby();
+            startSpel("2");
+            lastTag = data;
+            return;
+        }
 
-if(data==="START_3" && lastTag!=="START_3"){
-if(state==="recipe")resetStandby()
-startSpel("3")
-lastTag=data
-return
-}
+        if (data === "START_3") {
+            if (state === "recipe" || state === "video") resetStandby();
+            startSpel("3");
+            lastTag = data;
+            return;
+        }
 
-if (data === "START_VIDEO" && lastTag !== "START_VIDEO") {
-    startLiedje();
-    lastTag = data;
-    return;
-}
-  
-if(data!==lastTag){
-handleScan(data)
-lastTag=data
-}
+        // RFID Scans
+        if (data !== lastTag) {
+            handleScan(data);
+            lastTag = data;
+        }
 
-}catch(e){}
-
-},500)
+    } catch (e) {}
+}, 500);
 
 </script>
 </body>
