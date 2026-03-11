@@ -284,7 +284,7 @@ function handleScan(tag) {
         step++;
         if (step < huidigRecept.stappen.length) {
             const volgende = huidigRecept.stappen[step];
-            speelLijst(volgende.audio, "Goed zo! " + volgende.tekst, volgende.img);
+            speelLijst(volgende.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgende.tekst, volgende.img);
         } else {
             state = "recipe";
             speelLijst(huidigRecept.eindAudio, huidigRecept.eindTekst);
