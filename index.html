@@ -292,6 +292,8 @@ function handleScan(tag) {
         }
     } else {
         debug.innerText = "Verkeerde tag: " + tag;
+        // Speel foutmelding geluid af, maar behoud de huidige tekst op het scherm
+        speelLijst(["oei dit is een ander.mp3"], instructionText.innerText);
     }
 }
 
