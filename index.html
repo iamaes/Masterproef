@@ -116,7 +116,7 @@
 </div>
 
 <audio id="audio-player"></audio>
-<div id="debug">Systeem Standby - Druk op een knop</div>
+<div id="debug">Systeem Vergrendeld - Scan de startkaart</div>
 
 <script>
 const player = document.getElementById("audio-player");
@@ -131,6 +131,7 @@ let step = 0;
 let huidigRecept = null;
 let lastTag = "";
 let isProcessing = false;
+let isSystemActivated = false; // Nieuwe variabele om de activatiestatus bij te houden
 
 /* ---------------- RECEPT DATA ---------------- */
 const recepten = {
@@ -143,7 +144,7 @@ const recepten = {
             {tag: "926288184685", img: "rozemarijn.png", audio: ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Rozemarijn.mp3"], tekst: "Zoek de rozemarijn."}
         ],
         eindAudio: ["Goed gedaan We hebbe.mp3"],
-        eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
+        eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Here is het recept.",
         receptItems: [
             "Maak de oesterzwammen schoon.",
             "Laat je kind eens ruiken aan de oesterzwammen.",
@@ -218,7 +219,6 @@ function resetStandby() {
     state = "standby";
     step = 0;
     huidigRecept = null;
-    // lastTag wordt niet gewist om herhaling te voorkomen zolang bestand niet leeg is
 
     player.pause();
     player.src = "";
@@ -234,7 +234,11 @@ function resetStandby() {
     document.getElementById("game-container").classList.add("hidden");
     document.getElementById("recipe-window").classList.add("hidden");
 
-    debug.innerText = "Systeem Standby - Druk op een knop";
+    if (isSystemActivated) {
+        debug.innerText = "Systeem Standby - Druk op een knop";
+    } else {
+        debug.innerText = "Systeem Vergrendeld - Scan de startkaart";
+    }
 }
 
 /* ---------------- VIDEO & VERHAAL ---------------- */
@@ -327,6 +331,26 @@ setInterval(async () => {
 
         if (data === lastTag) return;
 
+        // GLOBALE STOP-TAG CHECK: Stopt het spel onmiddellijk en deactiveert het systeem
+        if (data === "497329376914") {
+            lastTag = data;
+            isSystemActivated = false;
+            resetStandby();
+            return;
+        }
+
+        // ACTIVATIE-TAG CHECK: Systeem wordt geactiveerd als deze specifieke tag gescand wordt
+        if (!isSystemActivated) {
+            if (data === "249221442199") {
+                isSystemActivated = true;
+                lastTag = data;
+                debug.innerText = "Systeem Standby - Druk op een knop";
+                // Optioneel: Speel hier eventueel een welkomstgeluidje af indien gewenst
+            }
+            return; // Zolang het systeem niet geactiveerd is, negeer alle andere inputs
+        }
+
+        // Onderstaande logica werkt nu uitsluitend als isSystemActivated op true staat
         if (data === "START_VIDEO") {
             lastTag = data;
             startVideo("Zwamzakken_lied_fin.mp4", "video");
