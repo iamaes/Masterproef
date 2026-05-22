@@ -272,7 +272,14 @@ function resetStandby() {
 
 /* ---------------- VIDEO & VERHAAL ---------------- */
 function startVideo(bestandsnaam, type) {
-    if (state === "video" || state === "verhaal") return; 
+    // BUGFIX: Als exact dezelfde video al speelt, doe niets.
+    // Maar als het type anders is (bijv. van 'video' naar 'verhaal'), breek dan de huidige video af!
+    if (state === type) return; 
+
+    // Reset de videospeler grondig om de vorige stream direct te breken
+    videoPlayer.pause();
+    videoPlayer.src = "";
+    videoPlayer.load();
 
     state = type;
     player.pause(); 
@@ -321,7 +328,7 @@ function handleScan(tag) {
         step++;
         if (step < huidigRecept.stappen.length) {
             const volgende = huidigRecept.stappen[step];
-            speelLijst(volgende.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgende.tekst, volgende.img);
+            speelLijst(volgende.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgende.tekst, voldoende.img);
         } else {
             state = "recipe";
             speelLijst(huidigRecept.eindAudio, huidigRecept.eindTekst);
@@ -371,24 +378,24 @@ setInterval(async () => {
         // A. GLOBALE STOPTAG (Maakt het scherm direct leeg en grijs)
         if (data === "47262729499") {
             lastTag = data;
-            lastSystemTag = data; // Wordt de laatst gescande tag
-            resetStandby(); // Forceert de stopzetting van eventueel lopende spellen/video's
+            lastSystemTag = data; 
+            resetStandby(); 
             return;
         }
 
         // B. PEULIES STANDBY-TAG (Zet het scherm direct op de Peulies-afbeelding)
         if (data === "497329376914") {
             lastTag = data;
-            lastSystemTag = data; // Wordt de laatst gescande tag
-            resetStandby(); // Stopt onmiddellijk lopende games/video's en toont de Peulies standby-plaat
+            lastSystemTag = data; 
+            resetStandby(); 
             return;
         }
 
         // C. ZWAMZAKKEN ACTIVATIE-TAG (Zet het scherm op de Zwamzakken-afbeelding)
         if (data === "249221442199") {
             lastTag = data;
-            lastSystemTag = data; // Wordt de laatst gescande tag
-            resetStandby(); // Brengt het systeem naar actieve standby-modus
+            lastSystemTag = data; 
+            resetStandby(); 
             return;
         }
 
@@ -396,7 +403,7 @@ setInterval(async () => {
         // SPELFUNCTIONALITEIT: Werkt EXCLUSIEF als de Zwamzakken-tag de LAATSTE was
         // =========================================================================
         if (lastSystemTag !== "249221442199") {
-            return; // Als Peulies of de Stoptag als laatste is gescand, negeer alle knoppen en ingrediënten
+            return; 
         }
 
         if (data === "START_VIDEO") {
