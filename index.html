@@ -146,7 +146,7 @@ let step = 0;
 let huidigRecept = null;
 let lastTag = "";
 let isProcessing = false;
-let isSystemActivated = false; 
+let lastSystemTag = ""; // Onthoudt de EXACTE laatst gescande systeemtag
 let currentStandbyImage = ""; // Onthoudt welke afbeelding actief moet zijn (zwamzakken of peulies)
 
 /* ---------------- RECEPT DATA ---------------- */
@@ -247,18 +247,23 @@ function resetStandby() {
     document.body.classList.remove("active");
     document.body.classList.add("standby");
 
-    if (isSystemActivated && currentStandbyImage !== "") {
-        // Breng de actieve grafische standby-afbeelding terug in beeld
-        standbyBg.src = currentStandbyImage;
+    // Bepaal de visuele weergave op basis van de LAATST gescande systeemtag
+    if (lastSystemTag === "249221442199") {
+        standbyBg.src = "standby_zwamkzakken.png";
         standbyBg.classList.remove("hidden");
-        debug.innerText = "Systeem Standby - Druk op een knop";
-        debug.style.color = "rgba(0,0,0,0.2)"; // Donkere tekst voor witte achtergronden
+        debug.innerText = "Systeem Standby (Zwamzakken) - Druk op een knop";
+        debug.style.color = "rgba(0,0,0,0.2)"; 
+    } else if (lastSystemTag === "497329376914") {
+        standbyBg.src = "standby_peulies.png";
+        standbyBg.classList.remove("hidden");
+        debug.innerText = "Systeem Standby (Peulies) - Knoppen geblokkeerd";
+        debug.style.color = "rgba(0,0,0,0.2)";
     } else {
-        // Systeem is gedeactiveerd of heeft de globale stoptag gekregen: terug naar egaal grijs
+        // Gedeactiveerd of stoptag (grijs opstartscherm)
         standbyBg.classList.add("hidden");
         standbyBg.src = "";
         debug.innerText = "Systeem Vergrendeld - Scan de startkaart";
-        debug.style.color = "rgba(255,255,255,0.4)"; // Lichte tekst voor grijze achtergrond
+        debug.style.color = "rgba(255,255,255,0.4)"; 
     }
 
     document.getElementById("game-container").classList.add("hidden");
@@ -272,7 +277,6 @@ function startVideo(bestandsnaam, type) {
     state = type;
     player.pause(); 
     
-    // Verberg de standby afbeelding/kleur zodra er media start
     standbyBg.classList.add("hidden");
 
     videoPlayer.src = bestandsnaam;
@@ -294,7 +298,6 @@ function startSpel(id) {
     
     if (state === "playing") return;
 
-    // Verberg de standby elementen zodra een recept start
     standbyBg.classList.add("hidden");
 
     huidigRecept = recepten[id];
@@ -361,37 +364,41 @@ setInterval(async () => {
 
         if (data === lastTag) return;
 
-        // 1. GLOBALE STOPTAG CHECK (Altijd prioriteit, dwingt direct terug naar leeg grijs scherm)
+        // =========================================================================
+        // DRIE HOOFD-SYSTEEMTAGS: Altijd actief en overschrijven direct de status
+        // =========================================================================
+
+        // A. GLOBALE STOPTAG (Maakt het scherm direct leeg en grijs)
         if (data === "47262729499") {
             lastTag = data;
-            isSystemActivated = false;
-            currentStandbyImage = "";
-            resetStandby();
+            lastSystemTag = data; // Wordt de laatst gescande tag
+            resetStandby(); // Forceert de stopzetting van eventueel lopende spellen/video's
             return;
         }
 
-        // 2. VERWISSELBARE STANDBY AFBEELDINGEN (Werken alleen als het systeem reeds geactiveerd is)
-        if (isSystemActivated) {
-            if (data === "497329376914") {
-                lastTag = data;
-                currentStandbyImage = "standby_peulies.png";
-                if (state === "standby") resetStandby();
-                return;
-            }
+        // B. PEULIES STANDBY-TAG (Zet het scherm direct op de Peulies-afbeelding)
+        if (data === "497329376914") {
+            lastTag = data;
+            lastSystemTag = data; // Wordt de laatst gescande tag
+            resetStandby(); // Stopt onmiddellijk lopende games/video's en toont de Peulies standby-plaat
+            return;
         }
 
-        // 3. ACTIVATIE-TAG CHECK (Haalt het systeem uit de grijze modus naar de zwamzakken-afbeelding)
-        if (!isSystemActivated) {
-            if (data === "249221442199") {
-                isSystemActivated = true;
-                currentStandbyImage = "standby_zwamkzakken.png";
-                lastTag = data;
-                resetStandby();
-            }
-            return; // Blokkeer alle knoppen en overige interacties zolang het systeem niet actief is
+        // C. ZWAMZAKKEN ACTIVATIE-TAG (Zet het scherm op de Zwamzakken-afbeelding)
+        if (data === "249221442199") {
+            lastTag = data;
+            lastSystemTag = data; // Wordt de laatst gescande tag
+            resetStandby(); // Brengt het systeem naar actieve standby-modus
+            return;
         }
 
-        // 4. ACTIEVE FUNCTIONALITEIT (Knoppen & Sensoren)
+        // =========================================================================
+        // SPELFUNCTIONALITEIT: Werkt EXCLUSIEF als de Zwamzakken-tag de LAATSTE was
+        // =========================================================================
+        if (lastSystemTag !== "249221442199") {
+            return; // Als Peulies of de Stoptag als laatste is gescand, negeer alle knoppen en ingrediënten
+        }
+
         if (data === "START_VIDEO") {
             lastTag = data;
             startVideo("Zwamzakken_lied_fin.mp4", "video");
