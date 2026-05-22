@@ -148,6 +148,7 @@ let lastTag = "";
 let isProcessing = false;
 let lastSystemTag = ""; // Onthoudt de EXACTE laatst gescande systeemtag
 let currentStandbyImage = ""; // Onthoudt welke afbeelding actief moet zijn (zwamzakken of peulies)
+let lastScanTime = 0; // Tijdbeveiliging tegen ghost-scans en dubbele activaties
 
 /* ---------------- RECEPT DATA ---------------- */
 const recepten = {
@@ -216,8 +217,8 @@ const recepten = {
 
 /* ---------------- AUDIO ---------------- */
 async function speelLijst(lijst, tekst, img) {
-    isProcessing = true;
-    instructionText.innerText = tekst;
+    isProcessing = true; // Blokkeer heel even tijdens het opbouwen van de nieuwe playlist
+    if (tekst) instructionText.innerText = tekst;
     if (img) statusImg.src = img;
 
     for (const bestand of lijst) {
@@ -227,7 +228,7 @@ async function speelLijst(lijst, tekst, img) {
             player.onended = resolve;
         });
     }
-    isProcessing = false;
+    isProcessing = false; // Meteen weer vrijgeven: er mag direct gescand worden!
 }
 
 /* ---------------- RESET ---------------- */
@@ -272,11 +273,10 @@ function resetStandby() {
 
 /* ---------------- VIDEO & VERHAAL ---------------- */
 function startVideo(bestandsnaam, type) {
-    // BUGFIX: Als exact dezelfde video al speelt, doe niets.
-    // Maar als het type anders is (bijv. van 'video' naar 'verhaal'), breek dan de huidige video af!
+    // Als exact dezelfde video al speelt, doe niets.
     if (state === type) return; 
 
-    // Reset de videospeler grondig om de vorige stream direct te breken
+    // Reset de videospeler grondig om een eventueel andere lopende stream direct te breken
     videoPlayer.pause();
     videoPlayer.src = "";
     videoPlayer.load();
@@ -321,22 +321,36 @@ function startSpel(id) {
 
 /* ---------------- RFID SCAN ---------------- */
 function handleScan(tag) {
-    if (state !== "playing" || isProcessing) return;
+    if (state !== "playing") return;
+
+    // UX-VERBETERING: Voorkom dat de RFID-lezer binnen 1.5 seconde meerdere opeenvolgende stappen triggert
+    const nu = Date.now();
+    if (nu - lastScanTime < 1500) {
+        debug.innerText = "Te snelle scan genegeerd...";
+        return;
+    }
 
     const stapData = huidigRecept.stappen[step];
     if (tag === stapData.tag) {
+        lastScanTime = nu; // Sla het tijdstip op van deze succesvolle scan
+        
+        // INTERACTIE-VERBETERING: Breek de huidige spelende audio DIRECT hard af voor de nieuwe stap!
+        player.pause(); 
+        
         step++;
         if (step < huidigRecept.stappen.length) {
             const volgende = huidigRecept.stappen[step];
-            speelLijst(volgende.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgende.tekst, voldoende.img);
+            speelLijst(volgende.audio, "Goed zo! Zoek nu het volgende ingrediënt. " + volgende.tekst, volgende.img);
         } else {
             state = "recipe";
             speelLijst(huidigRecept.eindAudio, huidigRecept.eindTekst);
             setTimeout(toonRecept, 4000);
         }
     } else {
+        // Ook bij een foute tag mag hij de huidige spraak direct onderbreken voor de foutmelding
+        player.pause();
         debug.innerText = "Verkeerde tag: " + tag;
-        speelLijst(["Oei dit is een ander.mp3"], "Verkeerde tag", "");
+        speelLijst(["Oei dit is een ander.mp3"], instructionText.innerText, "");
     }
 }
 
@@ -416,7 +430,8 @@ setInterval(async () => {
             lastTag = data;
             if (state === "recipe" || state === "video" || state === "verhaal") resetStandby();
             startSpel(data.split('_')[1]); 
-        } else if (state === "playing" && !isProcessing) {
+        } else if (state === "playing") {
+            // handleScan heeft nu een eigen interne tijdbeveiliging en mag altijd vuren
             handleScan(data);
             lastTag = data;
         }
