@@ -14,9 +14,9 @@
         transition:background-color 0.5s ease;
     }
 
+    /* Achtergrond is nu wit, we regelen de standby-look via de full-screen afbeelding */
     body.standby{
-        background:#2d3436;
-        color:#2d3436;
+        background:#ffffff;
     }
 
     body.active{
@@ -34,6 +34,17 @@
     }
 
     .hidden{display:none!important;}
+
+    /* Styling voor de full-screen standby afbeelding */
+    #standby-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        z-index: 1000; /* Staat overal bovenop in standby */
+    }
 
     #instruction{
         font-size:2.2rem;
@@ -93,11 +104,14 @@
         right:10px;
         font-size:12px;
         color:rgba(0,0,0,0.2);
+        z-index: 1001; /* Zorgt dat debug-tekst ook boven de standby-afbeelding leesbaar blijft */
     }
 </style>
 </head>
 
 <body class="standby">
+
+<img id="standby-bg" src="standby_zwamkzakken.png" alt="Standby">
 
 <div id="game-container" class="hidden">
     <h1 id="instruction">Laden...</h1>
@@ -125,13 +139,14 @@ const instructionText = document.getElementById("instruction");
 const debug = document.getElementById("debug");
 const videoContainer = document.getElementById("video-container");
 const videoPlayer = document.getElementById("recept-video");
+const standbyBg = document.getElementById("standby-bg"); // HTML-element ophalen
 
 let state = "standby";
 let step = 0;
 let huidigRecept = null;
 let lastTag = "";
 let isProcessing = false;
-let isSystemActivated = false; // Nieuwe variabele om de activatiestatus bij te houden
+let isSystemActivated = false; 
 
 /* ---------------- RECEPT DATA ---------------- */
 const recepten = {
@@ -144,7 +159,7 @@ const recepten = {
             {tag: "926288184685", img: "rozemarijn.png", audio: ["Goed zo Zoek nu het .mp3", "Zoek de.mp3", "Rozemarijn.mp3"], tekst: "Zoek de rozemarijn."}
         ],
         eindAudio: ["Goed gedaan We hebbe.mp3"],
-        eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Hier is het recept.",
+        eindTekst: "Goed gedaan. We hebben alles om het recept klaar te maken. Here is het recept.",
         receptItems: [
             "Maak de oesterzwammen schoon.",
             "Laat je kind eens ruiken aan de oesterzwammen.",
@@ -188,7 +203,7 @@ const recepten = {
             "Spoel de kikkererwten in een zeef onder de kraan en laat ze goed uitlekken.",
             "Dep de kikkererwten droog met een schone handdoek of keukenpapier.",
             "Ruik en voel samen met je kind aan de kikkererwten.",
-            "Meng ze met de olijfolie en de kruiden.",
+            "Meng ze met de olijfolie and de kruiden.",
             "Verspreid ze op een met bakpapier beklede bakplaat.",
             "Rooster ze 15 minuten, schep ze hierna om en laat ze nog 10 minuten bakken tot ze knapperig zijn",
             "Haal ze uit de oven en laat volledig afkoelen.",
@@ -231,6 +246,9 @@ function resetStandby() {
     document.body.classList.remove("active");
     document.body.classList.add("standby");
 
+    // Toon de standby afbeelding weer over het hele scherm
+    standbyBg.classList.remove("hidden");
+
     document.getElementById("game-container").classList.add("hidden");
     document.getElementById("recipe-window").classList.add("hidden");
 
@@ -248,6 +266,9 @@ function startVideo(bestandsnaam, type) {
     state = type;
     player.pause(); 
     
+    // Verberg de standby afbeelding zodra er media start
+    standbyBg.classList.add("hidden");
+
     videoPlayer.src = bestandsnaam;
     videoContainer.classList.remove("hidden");
     
@@ -266,6 +287,9 @@ function startSpel(id) {
     videoContainer.classList.add("hidden");
     
     if (state === "playing") return;
+
+    // Verberg de standby afbeelding zodra een recept start
+    standbyBg.classList.add("hidden");
 
     huidigRecept = recepten[id];
     state = "playing";
@@ -331,7 +355,7 @@ setInterval(async () => {
 
         if (data === lastTag) return;
 
-        // GLOBALE STOP-TAG CHECK: Stopt het spel onmiddellijk en deactiveert het systeem
+        // GLOBALE STOP-TAG CHECK
         if (data === "497329376914") {
             lastTag = data;
             isSystemActivated = false;
@@ -339,18 +363,17 @@ setInterval(async () => {
             return;
         }
 
-        // ACTIVATIE-TAG CHECK: Systeem wordt geactiveerd als deze specifieke tag gescand wordt
+        // ACTIVATIE-TAG CHECK
         if (!isSystemActivated) {
             if (data === "249221442199") {
                 isSystemActivated = true;
                 lastTag = data;
                 debug.innerText = "Systeem Standby - Druk op een knop";
-                // Optioneel: Speel hier eventueel een welkomstgeluidje af indien gewenst
             }
-            return; // Zolang het systeem niet geactiveerd is, negeer alle andere inputs
+            return; 
         }
 
-        // Onderstaande logica werkt nu uitsluitend als isSystemActivated op true staat
+        // Normale actieve verwerking
         if (data === "START_VIDEO") {
             lastTag = data;
             startVideo("Zwamzakken_lied_fin.mp4", "video");
