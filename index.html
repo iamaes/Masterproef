@@ -14,9 +14,9 @@
         transition:background-color 0.5s ease;
     }
 
-    /* Achtergrond is nu wit, we regelen de standby-look via de full-screen afbeelding */
+    /* Standaard opstartkleur is grijs voor het standby-scherm */
     body.standby{
-        background:#ffffff;
+        background:#2d3436;
     }
 
     body.active{
@@ -35,7 +35,7 @@
 
     .hidden{display:none!important;}
 
-    /* Styling voor de full-screen standby afbeelding */
+    /* Styling voor de full-screen standby afbeeldingen */
     #standby-bg {
         position: fixed;
         top: 0;
@@ -43,7 +43,7 @@
         width: 100vw;
         height: 100vh;
         object-fit: cover;
-        z-index: 1000; /* Staat overal bovenop in standby */
+        z-index: 1000; /* Staat overal bovenop in standby-modus */
     }
 
     #instruction{
@@ -103,7 +103,7 @@
         bottom:10px;
         right:10px;
         font-size:12px;
-        color:rgba(0,0,0,0.2);
+        color:rgba(255,255,255,0.4);
         z-index: 1001; /* Zorgt dat debug-tekst ook boven de standby-afbeelding leesbaar blijft */
     }
 </style>
@@ -111,7 +111,7 @@
 
 <body class="standby">
 
-<img id="standby-bg" src="standby_zwamkzakken.png" alt="Standby">
+<img id="standby-bg" src="" alt="Standby" class="hidden">
 
 <div id="game-container" class="hidden">
     <h1 id="instruction">Laden...</h1>
@@ -139,7 +139,7 @@ const instructionText = document.getElementById("instruction");
 const debug = document.getElementById("debug");
 const videoContainer = document.getElementById("video-container");
 const videoPlayer = document.getElementById("recept-video");
-const standbyBg = document.getElementById("standby-bg"); // HTML-element ophalen
+const standbyBg = document.getElementById("standby-bg");
 
 let state = "standby";
 let step = 0;
@@ -147,6 +147,7 @@ let huidigRecept = null;
 let lastTag = "";
 let isProcessing = false;
 let isSystemActivated = false; 
+let currentStandbyImage = ""; // Onthoudt welke afbeelding actief moet zijn (zwamzakken of peulies)
 
 /* ---------------- RECEPT DATA ---------------- */
 const recepten = {
@@ -246,17 +247,22 @@ function resetStandby() {
     document.body.classList.remove("active");
     document.body.classList.add("standby");
 
-    // Toon de standby afbeelding weer over het hele scherm
-    standbyBg.classList.remove("hidden");
+    if (isSystemActivated && currentStandbyImage !== "") {
+        // Breng de actieve grafische standby-afbeelding terug in beeld
+        standbyBg.src = currentStandbyImage;
+        standbyBg.classList.remove("hidden");
+        debug.innerText = "Systeem Standby - Druk op een knop";
+        debug.style.color = "rgba(0,0,0,0.2)"; // Donkere tekst voor witte achtergronden
+    } else {
+        // Systeem is gedeactiveerd of heeft de globale stoptag gekregen: terug naar egaal grijs
+        standbyBg.classList.add("hidden");
+        standbyBg.src = "";
+        debug.innerText = "Systeem Vergrendeld - Scan de startkaart";
+        debug.style.color = "rgba(255,255,255,0.4)"; // Lichte tekst voor grijze achtergrond
+    }
 
     document.getElementById("game-container").classList.add("hidden");
     document.getElementById("recipe-window").classList.add("hidden");
-
-    if (isSystemActivated) {
-        debug.innerText = "Systeem Standby - Druk op een knop";
-    } else {
-        debug.innerText = "Systeem Vergrendeld - Scan de startkaart";
-    }
 }
 
 /* ---------------- VIDEO & VERHAAL ---------------- */
@@ -266,7 +272,7 @@ function startVideo(bestandsnaam, type) {
     state = type;
     player.pause(); 
     
-    // Verberg de standby afbeelding zodra er media start
+    // Verberg de standby afbeelding/kleur zodra er media start
     standbyBg.classList.add("hidden");
 
     videoPlayer.src = bestandsnaam;
@@ -288,7 +294,7 @@ function startSpel(id) {
     
     if (state === "playing") return;
 
-    // Verberg de standby afbeelding zodra een recept start
+    // Verberg de standby elementen zodra een recept start
     standbyBg.classList.add("hidden");
 
     huidigRecept = recepten[id];
@@ -355,25 +361,37 @@ setInterval(async () => {
 
         if (data === lastTag) return;
 
-        // GLOBALE STOP-TAG CHECK
-        if (data === "497329376914") {
+        // 1. GLOBALE STOPTAG CHECK (Altijd prioriteit, dwingt direct terug naar leeg grijs scherm)
+        if (data === "47262729499") {
             lastTag = data;
             isSystemActivated = false;
+            currentStandbyImage = "";
             resetStandby();
             return;
         }
 
-        // ACTIVATIE-TAG CHECK
+        // 2. VERWISSELBARE STANDBY AFBEELDINGEN (Werken alleen als het systeem reeds geactiveerd is)
+        if (isSystemActivated) {
+            if (data === "497329376914") {
+                lastTag = data;
+                currentStandbyImage = "standby_peulies.png";
+                if (state === "standby") resetStandby();
+                return;
+            }
+        }
+
+        // 3. ACTIVATIE-TAG CHECK (Haalt het systeem uit de grijze modus naar de zwamzakken-afbeelding)
         if (!isSystemActivated) {
             if (data === "249221442199") {
                 isSystemActivated = true;
+                currentStandbyImage = "standby_zwamkzakken.png";
                 lastTag = data;
-                debug.innerText = "Systeem Standby - Druk op een knop";
+                resetStandby();
             }
-            return; 
+            return; // Blokkeer alle knoppen en overige interacties zolang het systeem niet actief is
         }
 
-        // Normale actieve verwerking
+        // 4. ACTIEVE FUNCTIONALITEIT (Knoppen & Sensoren)
         if (data === "START_VIDEO") {
             lastTag = data;
             startVideo("Zwamzakken_lied_fin.mp4", "video");
