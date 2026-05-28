@@ -259,6 +259,16 @@ function resetStandby() {
         standbyBg.classList.remove("hidden");
         debug.innerText = "Systeem Standby (Peulies) - Knoppen geblokkeerd";
         debug.style.color = "rgba(0,0,0,0.2)";
+    } else if (lastSystemTag === "866399290392") {
+        standbyBg.src = "standby_verkeer.png";
+        standbyBg.classList.remove("hidden");
+        debug.innerText = "Systeem Standby (Verkeer) - Knoppen geblokkeerd";
+        debug.style.color = "rgba(0,0,0,0.2)"; 
+    } else if (lastSystemTag === "852454016128") {
+        standbyBg.src = "standby_dieren.png";
+        standbyBg.classList.remove("hidden");
+        debug.innerText = "Systeem Standby (Dieren) - Knoppen geblokkeerd";
+        debug.style.color = "rgba(0,0,0,0.2)"; 
     } else {
         // Gedeactiveerd of stoptag (grijs opstartscherm)
         standbyBg.classList.add("hidden");
@@ -398,14 +408,30 @@ setInterval(async () => {
         }
 
         // B. PEULIES STANDBY-TAG (Zet het scherm direct op de Peulies-afbeelding)
-        if (data === "497329376914") {
+        if (data === "317227140263") {
             lastTag = data;
             lastSystemTag = data; 
             resetStandby(); 
             return;
         }
 
-        // C. ZWAMZAKKEN ACTIVATIE-TAG (Zet het scherm op de Zwamzakken-afbeelding)
+        // B. Verkeer STANDBY-TAG (Zet het scherm direct op de Verkeer-afbeelding)
+        if (data === "866399290392") {
+            lastTag = data;
+            lastSystemTag = data; 
+            resetStandby(); 
+            return;
+        }
+
+        // C. Dieren STANDBY-TAG (Zet het scherm direct op de Dieren-afbeelding)
+        if (data === "852454016128") {
+            lastTag = data;
+            lastSystemTag = data; 
+            resetStandby(); 
+            return;
+        }
+
+        // D. ZWAMZAKKEN ACTIVATIE-TAG (Zet het scherm op de Zwamzakken-afbeelding)
         if (data === "249221442199") {
             lastTag = data;
             lastSystemTag = data; 
